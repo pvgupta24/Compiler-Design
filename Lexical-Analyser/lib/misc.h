@@ -19,7 +19,12 @@
 #define FORE_WHT  "\x1B[37m"
 
 // Background Colours
+#define BACK_YEL "\x1b[43m"
 
+// Other Attributes
+#define ATTR_BOLD "\x1b[1m"
 
 // Symbols
 #define SYMBOL_TICK "\xE2\x9C\x93"
+
+#define DASHES "======================================================================================\n"

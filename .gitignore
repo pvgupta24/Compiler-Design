@@ -53,3 +53,6 @@ dkms.conf
 
 # Intermediate Code files
 *.yy.c
+
+# IDE's
+*.vscode/*

@@ -10,7 +10,13 @@
 
 /* Auxiliary declarations*/
 %{
-    #include "lib.h"
+    #include "lib/misc.h"
+    #include "lib/symbol_table.h"
+    
+    #define MAX_NODES 1000
+
+    symbol_node_t *symbol_table[MAX_NODES];
+    symbol_node_t *constant_table[MAX_NODES];
 %}
 
 /* Regular definitions */
@@ -23,11 +29,18 @@ letter      [a-zA-Z]
 
 /* User SubRoutines */
 int main() {
-    printf(FORE_MAG "\n=====================================\n" RESET);
-    printf(FORE_CYN "   Lexical Analyser for C language\n" RESET);
-    printf(FORE_MAG "=====================================\n\n" RESET);
+    printf(FORE_MAG "\n" DASHES RESET);
+    printf(FORE_CYN "\t\t\tLexical Analyser for C language\n" RESET);
+    printf(FORE_MAG DASHES "\n" RESET);
 
     yylex();
+
+    symbol_table_insert(symbol_table, "x", "int", 23);
+    symbol_table_insert(symbol_table, "y", "char", 28);
+    symbol_table_insert(symbol_table, "z", "int", 23);
+
+    symbol_table_print(symbol_table, "Symbol Table");
+    symbol_table_print(constant_table, "Constant Table");
 
     return 0;
 }
