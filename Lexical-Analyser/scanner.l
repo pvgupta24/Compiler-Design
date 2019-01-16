@@ -31,9 +31,15 @@ function    (_|{letter})({letter}|{digit}|_)*"()"
 /* Pattern Matching Rules */
 %%
 [\n]                                         { lineNum++; }
+" "                                          {}
 
 "//".*                                       { printf("%-20s%20s%20d\n","SINGLE LINE COMMENT", yytext, lineNum); }
-"/*""/"*(("*"*[^*/]+"/"*)*"|""*"+)"*/"       { printf("%-20s%20s%20d\n","MULTI LINE COMMENT", yytext, lineNum); }
+("/*")(([^*]*[*]+[^*/])*([^*]*[*]+[/]))      { printf("%-20s%20s%20d\n","MULTI LINE COMMENT", yytext, lineNum); }
+
+("/*")(([^*]*([*]+[^/])*)*)*                 { printf("%-20s%20s%20d\n","ERROR: MULTI LINE COMMENT NOT CLOSED", yytext, lineNum); }
+
+("\"")[^\n\"]*("\"")                         { printf("%-20s%20s%20d\n","STRING", yytext, lineNum); }
+("\"")[^\n\"]*                               { printf("%-20s%20s%20d\n","ERROR: UNCLOSED STRING", yytext, lineNum); }
 
 {keyword}                                    { printf("%-20s%20s%20d\n","KEYWORD", yytext, lineNum); }
 "long long"                                  { printf("%-20s%20s%20d\n","DATATYPE", yytext, lineNum); }
@@ -65,16 +71,16 @@ int main() {
     printf(FORE_CYN "\t\t\tLexical Analyser for C language\n" RESET);
     printf(FORE_MAG DASHES "\n" RESET);
 
-    printf(FORE_GRN "%-20s%20s%24s\n", "TOKEN VALUE", "TOKEN TYPE", "LINE NUMBER" RESET);
+    printf(FORE_GRN "%-20s%20s%24s\n", "TOKEN TYPE", "TOKEN VALUE", "LINE NUMBER" RESET);
 
     yylex();
 
-    symbol_table_insert(symbol_table, "x", "int", 23);
-    symbol_table_insert(symbol_table, "y", "char", 28);
-    symbol_table_insert(symbol_table, "z", "int", 23);
+    // symbol_table_insert(symbol_table, "x", "int", 23);
+    // symbol_table_insert(symbol_table, "y", "char", 28);
+    // symbol_table_insert(symbol_table, "z", "int", 23);
 
-    symbol_table_print(symbol_table, "Symbol Table");
-    symbol_table_print(constant_table, "Constant Table");
+    // symbol_table_print(symbol_table, "Symbol Table");
+    // symbol_table_print(constant_table, "Constant Table");
 
     return 0;
 }
