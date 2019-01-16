@@ -43,29 +43,40 @@ escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
                                                 printf("%-20s%20s%20d\n","STRING", yytext, yylineno); 
                                                 symbol_table_insert(constant_table, yytext, "String", yylineno);
                                              }
+
 ("\"")[^\n\"]*                               { printf("%-20s%20s%20d\n","ERROR: UNCLOSED STRING", yytext, yylineno); }
 
 ("\'")(("\\"({escape_sequences}))|.)("\'")   { 
                                                 printf("%-20s%20s%20d\n","CHARACTER", yytext, yylineno); 
                                                 symbol_table_insert(constant_table, yytext, "Character", yylineno);
                                              }
+
 ("\'")(((("\\")[^0abfnrtv\\\"\'][^\n\']*))|[^\n\''][^\n\'']+)("\'") { 
                                                printf("%-20s%20s%20d\n","ERROR: NOT A CHARACTER", yytext, yylineno); }
 
 {keyword}                                    { 
-                                                symbol_table_insert(symbol_table, yytext, "Keyword", yylineno);
+                                                if(!symbol_table_lookup(symbol_table, yytext))
+                                                {
+                                                   symbol_table_insert(symbol_table, yytext, "Keyword", yylineno);
+                                                }
                                                 printf("%-20s%20s%20d\n","KEYWORD", yytext, yylineno); 
                                              }
 "long long"                                  { 
                                                 printf("%-20s%20s%20d\n","DATATYPE", yytext, yylineno); 
-                                                symbol_table_insert(symbol_table, "long long", "Keyword", yylineno);
+                                                if(!symbol_table_lookup(symbol_table, yytext))
+                                                {
+                                                   symbol_table_insert(symbol_table, "long long", "Keyword", yylineno);
+                                                }
                                              }
 
 {operator}                                   { printf("%-20s%20s%20d\n","OPERATOR", yytext, yylineno); }
 
 (_|{letter})({letter}|{digit}|_)*            { 
                                                 printf("%-20s%20s%20d\n","IDENTIFIER", yytext, yylineno); 
-                                                symbol_table_insert(symbol_table, yytext, "Identfier", yylineno);
+                                                if(!symbol_table_lookup(symbol_table, yytext))
+                                                {
+                                                   symbol_table_insert(symbol_table, yytext, "Identfier", yylineno);
+                                                }
                                              }
 
 "-"?{digit}+                                 { 

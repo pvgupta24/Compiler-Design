@@ -54,7 +54,7 @@ bool symbol_table_lookup(symbol_node_t **symbol_table, const char* symbol){
    int hash_index = symbol_table_hash(symbol);
    for(symbol_node_t *curr = symbol_table[hash_index]; curr != NULL; curr = curr->next){
       // Symbol found in table
-      if(strcmp(curr->symbol, symbol)){
+      if(!strcmp(curr->symbol, symbol)){
          return true;
       }
    }
