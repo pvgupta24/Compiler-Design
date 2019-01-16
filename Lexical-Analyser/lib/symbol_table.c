@@ -21,7 +21,9 @@ int symbol_table_hash(const char *symbol){
 symbol_node_t *create_symbol_node(const char* symbol, const char *type, const int line_number){
 
    symbol_node_t *node = malloc(sizeof(symbol_node_t));
-   node->symbol = (char*)symbol;
+   node->symbol = malloc(sizeof(char) * (strlen(symbol) +1));
+   strcpy(node->symbol, symbol);
+   // node->symbol = (char*)symbol;
    node->type = (char*)type;
    node->line_number = line_number;
    node->next = NULL;
