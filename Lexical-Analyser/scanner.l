@@ -18,8 +18,6 @@
 
     symbol_node_t *symbol_table[MAX_NODES];
     symbol_node_t *constant_table[MAX_NODES];
-
-    // int yylineno = 1;
 %}
 
 /* Regular definitions */
