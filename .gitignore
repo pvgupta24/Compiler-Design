@@ -58,4 +58,5 @@ dkms.conf
 *.vscode/*
 
 # Outputs
-*outputs/*
+*/outputs/*
+*.tokens*

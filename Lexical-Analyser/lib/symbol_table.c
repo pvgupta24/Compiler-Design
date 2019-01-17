@@ -73,7 +73,7 @@ void symbol_table_free(symbol_node_t **symbol_table){
 }
 
 void symbol_table_print(symbol_node_t **symbol_table, const char *table_name){
-   printf(FORE_MAG DASHES RESET);
+   printf("\n\n" FORE_MAG DASHES RESET);
    printf(FORE_CYN "%s\t\n" RESET, table_name);
    printf(FORE_YEL DASHES RESET);
 
@@ -86,5 +86,5 @@ void symbol_table_print(symbol_node_t **symbol_table, const char *table_name){
       }
    }
 
-   printf(FORE_MAG DASHES RESET);
+   printf(FORE_MAG DASHES RESET "\n\n");
 }
