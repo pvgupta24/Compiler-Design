@@ -9,7 +9,7 @@ if [ -d "$DIRECTORY" ]; then
 fi
 mkdir "$DIRECTORY"
 
-lex scanner.l && gcc lex.yy.c lib/symbol_table.c -lfl -o scanner.out
+lex -l scanner.l && gcc lex.yy.c lib/symbol_table.c -lfl -o scanner.out
 
 for testcase in $(ls testcases); do
     TEMP_OUTPUT="$DIRECTORY$testcase"

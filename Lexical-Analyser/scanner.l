@@ -2,7 +2,7 @@
 * Lexical Analyser for C language
 * @author Shashank P, Praveen Gupta, Ashwin Joisa
 *
-* Usage: lex scanner.l && gcc lex.yy.c -lfl && ./a.out
+* Usage: ./run.sh or ./runtests.sh
 */
 
 /* Declaration section */
@@ -26,16 +26,17 @@
 digit               [0-9]
 letter              [a-zA-Z]
 alphanum            {letter}|{digit}
-keyword             char|int|main|float|double|short|long|unsigned|signed|main|while|for|break|if|else|continue|return|void|struct|"long long"
+keyword             char|int|main|float|double|short|long|unsigned|signed|main|while|for|break|if|else|continue|return|void|struct
 operator            "+"|"-"|"++"|"--"|"!"|"~"|"*"|"/"|"%"|">>"|"<<"|"&"|"^"|\||\|\||"="|">"|"<"|">="|"<="|"=="|"!="
-function            (_|{letter})({alphanum}|_)*[ ]*[(][ ]*[])]
+function            ((_|{letter})({alphanum}|_)*)/[ ]*[(]
 escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
 
 /* Pattern Matching Rules */
 %%
 \n                                           {}
 " "                                          {}
-"#include"[ ]*"<"{letter}({alphanum})*".h>"   { print_token("HEADER FILE", yytext, yylineno); }
+"#include"[ ]*"<"{letter}({alphanum})*".h>"   { print_token("PREPROCESSOR DIRECTIVE", yytext, yylineno); }
+"#define"[ ]+(_|{letter})({alphanum})*[ ]*(.)+   { print_token("PREPROCESSOR DIRECTIVE", yytext, yylineno); }
 
 "//".*                                       { print_token("SINGLE LINE COMMENT", yytext, yylineno); }
 ("/*")(([^*]*[*]+[^*/])*([^*]*[*]+[/]))      { print_token("MULTI LINE COMMENT", yytext, yylineno); }
@@ -55,7 +56,7 @@ escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
 ("\'")(((("\\")[^0abfnrtv\\\"\'][^\n\']*))|[^\n\''][^\n\'']+)("\'") { 
                                                print_token(FORE_RED "ERROR: NOT A CHARACTER", yytext, yylineno); }
 
-{keyword}                                    { 
+{keyword}/[ ]*[(]?                           { 
                                                 print_token("KEYWORD", yytext, yylineno); 
                                              }
 
@@ -65,7 +66,16 @@ escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
 
 {operator}                                   { print_token("OPERATOR", yytext, yylineno); }
 
-(_|{letter})({alphanum}|_)*            { 
+
+{function}                                   { 
+                                                print_token("FUNCTION", yytext, yylineno);
+                                                // int i=0;
+                                                // for(i=0; yytext[i]!='\0' && yytext[i] !='('; ++i);
+                                                // yytext[i] ='\0';
+                                                symbol_table_insert(symbol_table, yytext, "Function", yylineno);
+                                             }
+
+(_|{letter})({alphanum}|_)*                  { 
                                                 print_token("IDENTIFIER", yytext, yylineno);
                                                 symbol_table_insert(symbol_table, yytext, "Identfier", yylineno);
                                              }
@@ -88,8 +98,6 @@ escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
 "}"                                          { print_token("RIGHT BRACE", yytext, yylineno); }
 ","                                          { print_token("COMMA", yytext, yylineno); }
 ";"                                          { print_token("SEMICOLON", yytext, yylineno); }
-
-{function}                                   { print_token("FUNCTION", yytext, yylineno); }
 
 %%
 
