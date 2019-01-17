@@ -34,6 +34,7 @@ escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
 %%
 \n                                           {}
 " "                                          {}
+"#include"[ ]*"<"[a-zA-Z][0-9a-zA-z]*".h>" { printf("%-20s%20s%20d\n","HEADER FILE", yytext, yylineno); }
 
 "//".*                                       { print_token("SINGLE LINE COMMENT", yytext, yylineno); }
 ("/*")(([^*]*[*]+[^*/])*([^*]*[*]+[/]))      { print_token("MULTI LINE COMMENT", yytext, yylineno); }
