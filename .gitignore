@@ -56,3 +56,6 @@ dkms.conf
 
 # IDE's
 *.vscode/*
+
+# Outputs
+*outputs/*

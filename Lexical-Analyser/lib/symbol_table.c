@@ -32,6 +32,8 @@ symbol_node_t *create_symbol_node(const char* symbol, const char *type, const in
 }
 
 void symbol_table_insert(symbol_node_t **symbol_table, const char* symbol, const char *type, const int line_number){
+   if(symbol_table_lookup(symbol_table, symbol))
+      return;
 
    int hash_index = symbol_table_hash(symbol);
    symbol_node_t *node = create_symbol_node(symbol, type, line_number);
@@ -54,7 +56,7 @@ bool symbol_table_lookup(symbol_node_t **symbol_table, const char* symbol){
    int hash_index = symbol_table_hash(symbol);
    for(symbol_node_t *curr = symbol_table[hash_index]; curr != NULL; curr = curr->next){
       // Symbol found in table
-      if(strcmp(curr->symbol, symbol)){
+      if(!strcmp(curr->symbol, symbol)){
          return true;
       }
    }
