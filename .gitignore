@@ -53,9 +53,14 @@ dkms.conf
 
 # Intermediate Code files
 *.yy.c
+lex.yy.c
+y.tab.c
+y.tab.h
 
-# IDE's
+# IDE's and other folders
 *.vscode/*
+Calculator/
+temp/
 
 # Outputs
 */outputs/*
