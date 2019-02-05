@@ -2,7 +2,7 @@
 * Lexical Analyser for C language
 * @author Shashank P, Praveen Gupta, Ashwin Joisa
 *
-* Usage: lex scanner.l && gcc lex.yy.c -lfl && ./a.out
+* Usage: ./run.sh or ./runtests.sh
 */
 
 /* Declaration section */
@@ -11,109 +11,115 @@
 
 /* Auxiliary declarations*/
 %{
-    #include "lib/misc.h"
-    #include "lib/symbol_table.h"
-    
-    #define MAX_NODES 1000
+   #include "lib/misc.h"
+   #include "lib/symbol_table.h"
+   
+   #define MAX_NODES 1000
 
-    symbol_node_t *symbol_table[MAX_NODES];
-    symbol_node_t *constant_table[MAX_NODES];
+   symbol_node_t *symbol_table[MAX_NODES];
+   symbol_node_t *constant_table[MAX_NODES];
+
+   void print_token(char *info, char *token, int line_number);
 %}
 
 /* Regular definitions */
 digit               [0-9]
 letter              [a-zA-Z]
+alphanum            {letter}|{digit}
 keyword             char|int|main|float|double|short|long|unsigned|signed|main|while|for|break|if|else|continue|return|void|struct
 operator            "+"|"-"|"++"|"--"|"!"|"~"|"*"|"/"|"%"|">>"|"<<"|"&"|"^"|\||\|\||"="|">"|"<"|">="|"<="|"=="|"!="
-function            (_|{letter})({letter}|{digit}|_)*[ ]*[(][ ]*[])]
+function            ((_|{letter})({alphanum}|_)*)/[ ]*[(]
 escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
 
 /* Pattern Matching Rules */
 %%
 \n                                           {}
 " "                                          {}
-"#include"[ ]*"<"[a-zA-Z][0-9a-zA-z]*".h>" { printf("%-20s%20s%20d\n","HEADER FILE", yytext, yylineno); }
+"#include"[ ]*"<"{letter}({alphanum})*".h>"   { print_token("PREPROCESSOR DIRECTIVE", yytext, yylineno); }
+"#define"[ ]+(_|{letter})({alphanum})*[ ]*(.)+   { print_token("PREPROCESSOR DIRECTIVE", yytext, yylineno); }
 
-"//".*                                       { printf("%-20s%20s%20d\n","SINGLE LINE COMMENT", yytext, yylineno); }
-("/*")(([^*]*[*]+[^*/])*([^*]*[*]+[/]))      { printf("%-20s%20s%20d\n","MULTI LINE COMMENT", yytext, yylineno); }
+"//".*                                       { print_token("SINGLE LINE COMMENT", yytext, yylineno); }
+("/*")(([^*]*[*]+[^*/])*([^*]*[*]+[/]))      { print_token("MULTI LINE COMMENT", yytext, yylineno); }
 
-("/*")(([^*]*([*]+[^/])*)*)*                 { printf("%-20s%20s%20d\n","ERROR: MULTI LINE COMMENT NOT CLOSED", yytext, yylineno); }
+("/*")(([^*]*([*]+[^/])*)*)*                 { print_token(FORE_RED "ERROR: MULTI LINE COMMENT NOT CLOSED", yytext, yylineno); }
 
 ("\"")[^\n\"]*("\"")                         { 
-                                                printf("%-20s%20s%20d\n","STRING", yytext, yylineno); 
+                                                print_token("STRING", yytext, yylineno); 
                                                 symbol_table_insert(constant_table, yytext, "String", yylineno);
                                              }
-
-("\"")[^\n\"]*                               { printf("%-20s%20s%20d\n","ERROR: UNCLOSED STRING", yytext, yylineno); }
+("\"")[^\n\"]*                               { print_token(FORE_RED "ERROR: UNCLOSED STRING", yytext, yylineno); }
 
 ("\'")(("\\"({escape_sequences}))|.)("\'")   { 
-                                                printf("%-20s%20s%20d\n","CHARACTER", yytext, yylineno); 
+                                                print_token("CHARACTER", yytext, yylineno); 
                                                 symbol_table_insert(constant_table, yytext, "Character", yylineno);
                                              }
 
 ("\'")(((("\\")[^0abfnrtv\\\"\'][^\n\']*))|[^\n\''][^\n\'']+)("\'") { 
-                                               printf("%-20s%20s%20d\n","ERROR: NOT A CHARACTER", yytext, yylineno); }
+                                               print_token(FORE_RED "ERROR: NOT A CHARACTER", yytext, yylineno); }
 
-{keyword}                                    { 
-                                                if(!symbol_table_lookup(symbol_table, yytext))
-                                                {
-                                                   symbol_table_insert(symbol_table, yytext, "Keyword", yylineno);
-                                                }
-                                                printf("%-20s%20s%20d\n","KEYWORD", yytext, yylineno); 
-                                             }
-"long long"                                  { 
-                                                printf("%-20s%20s%20d\n","DATATYPE", yytext, yylineno); 
-                                                if(!symbol_table_lookup(symbol_table, yytext))
-                                                {
-                                                   symbol_table_insert(symbol_table, "long long", "Keyword", yylineno);
-                                                }
+{keyword}/[ ]*[(]?                           { 
+                                                print_token("KEYWORD", yytext, yylineno); 
                                              }
 
-{operator}                                   { printf("%-20s%20s%20d\n","OPERATOR", yytext, yylineno); }
+#include[/"<][ ]*{letter}{letter}*\.h[/">]   {
+                                                print_token("HEADER", yytext, yylineno);                                                 
+                                             }
 
-(_|{letter})({letter}|{digit}|_)*            { 
-                                                printf("%-20s%20s%20d\n","IDENTIFIER", yytext, yylineno); 
-                                                if(!symbol_table_lookup(symbol_table, yytext))
-                                                {
-                                                   symbol_table_insert(symbol_table, yytext, "Identfier", yylineno);
-                                                }
+{operator}                                   { print_token("OPERATOR", yytext, yylineno); }
+
+
+{function}                                   { 
+                                                print_token("FUNCTION", yytext, yylineno);
+                                                // int i=0;
+                                                // for(i=0; yytext[i]!='\0' && yytext[i] !='('; ++i);
+                                                // yytext[i] ='\0';
+                                                symbol_table_insert(symbol_table, yytext, "Function", yylineno);
+                                             }
+
+(_|{letter})({alphanum}|_)*                  { 
+                                                print_token("IDENTIFIER", yytext, yylineno);
+                                                symbol_table_insert(symbol_table, yytext, "Identfier", yylineno);
                                              }
 
 "-"?{digit}+                                 { 
-                                                printf("%-20s%20s%20d\n","INTEGER", yytext, yylineno); 
+                                                print_token("INTEGER", yytext, yylineno);
                                                 symbol_table_insert(constant_table, yytext, "Integer", yylineno);
                                              }
 
 "-"?{digit}+\.({digit}+)?                    { 
-                                                printf("%-20s%20s%20d\n","FLOATING POINT", yytext, yylineno); 
+                                                print_token("FLOATING POINT", yytext, yylineno); 
                                                 symbol_table_insert(constant_table, yytext, "Floating point", yylineno);
                                              }
 
-"["                                          { printf("%-20s%20s%20d\n","LEFT BRACKET", yytext, yylineno); }
-"]"                                          { printf("%-20s%20s%20d\n","RIGHT BRACKET", yytext, yylineno); }
-"("                                          { printf("%-20s%20s%20d\n","LEFT PARENTHESIS", yytext, yylineno); }
-")"                                          { printf("%-20s%20s%20d\n","RIGHT PARENTHESIS", yytext, yylineno); }
-"{"                                          { printf("%-20s%20s%20d\n","LEFT BRACE", yytext, yylineno); }
-"}"                                          { printf("%-20s%20s%20d\n","RIGHT BRACE", yytext, yylineno); }
-","                                          { printf("%-20s%20s%20d\n","COMMA", yytext, yylineno); }
-";"                                          { printf("%-20s%20s%20d\n","SEMICOLON", yytext, yylineno); }
-
-{function}                                   { printf("%-20s%20s%20d\n","FUNCTION", yytext, yylineno); }
+"["                                          { print_token("LEFT BRACKET", yytext, yylineno); }
+"]"                                          { print_token("RIGHT BRACKET", yytext, yylineno); }
+"("                                          { print_token("LEFT PARENTHESIS", yytext, yylineno); }
+")"                                          { print_token("RIGHT PARENTHESIS", yytext, yylineno); }
+"{"                                          { print_token("LEFT BRACE", yytext, yylineno); }
+"}"                                          { print_token("RIGHT BRACE", yytext, yylineno); }
+","                                          { print_token("COMMA", yytext, yylineno); }
+";"                                          { print_token("SEMICOLON", yytext, yylineno); }
 
 %%
 
+void print_token(char *info, char *token, int line_number){
+   printf(FORE_CYN "%-30s%-30s%-30d\n" RESET, info, token, line_number);
+}
+
 /* User SubRoutines */
-int main() {
-    printf(FORE_MAG "\n" DASHES RESET);
-    printf(FORE_CYN "\t\t\tLexical Analyser for C language\n" RESET);
-    printf(FORE_MAG DASHES "\n" RESET);
+int main()
+{
+   
+   printf(FORE_MAG "\n" DASHES RESET);
+   printf(FORE_CYN "\t\t\tLexical Analyser for C language\n" RESET);
+   printf(FORE_MAG DASHES "\n" RESET);
 
-    printf(FORE_GRN "%-20s%20s%24s\n", "TOKEN TYPE", "TOKEN VALUE", "LINE NUMBER" RESET);
+   printf(FORE_GRN "%-30s%-30s%-30s\n", "TOKEN TYPE", "TOKEN VALUE", "LINE NUMBER" RESET);
 
-    yylex();
+   yylex();
 
-    symbol_table_print(symbol_table, "Symbol Table");
-    symbol_table_print(constant_table, "Constant Table");
+   symbol_table_print(symbol_table, "Symbol Table");
+   symbol_table_print(constant_table, "Constant Table");
 
-    return 0;
+   return 0;
 }
