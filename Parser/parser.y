@@ -32,19 +32,22 @@
 %}
 
 /* ****Tokens**** */
-%token IDENTIFIER STRING_CONSTANT CHAR_CONSTANT INT_CONSTANT FLOAT_CONSTANT SIZEOF
+%token<str> IDENTIFIER STRING_CONSTANT CHAR_CONSTANT INT_CONSTANT FLOAT_CONSTANT SIZEOF
 %token INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
 %token XOR_ASSIGN OR_ASSIGN TYPE_NAME DEF
-%token CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOID
+%token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOID
 %token IF ELSE WHILE CONTINUE BREAK RETURN
+
+%type<str> type_specifier
 
 // Declare the start grammer rule for the program to be parsed
 %start start_state
 
 %union {
-	char id[100];
+	char *str;
+	int int_val;
 }
 %nonassoc NO_ELSE
 %nonassoc ELSE
@@ -68,17 +71,17 @@ start_state
 	;
 
 global_declaration
-	: function_definition
+	: function_definition   
 	| declaration
 	;
 
 function_definition
-	: declaration_specifiers declarator compound_statement
+	: declaration_specifiers declarator compound_statement  
 	| declarator compound_statement
 	;
 
 fundamental_exp
-	: IDENTIFIER { printf("yay3\n"); }
+	: IDENTIFIER 
 	| STRING_CONSTANT		{   symbol_table_insert(constant_table, $1, "string", yylineno); }
 	| CHAR_CONSTANT         {   symbol_table_insert(constant_table, $1, "char", yylineno); }
 	| FLOAT_CONSTANT	    {   symbol_table_insert(constant_table, $1, "float", yylineno); }
@@ -220,7 +223,7 @@ declaration
 	;
 
 declaration_specifiers
-	: type_specifier	{ printf("noooo\n"); strcpy(type, $1); printf("nope\n");}
+	: type_specifier	{ strcpy(type, $1); }
 	| type_specifier declaration_specifiers	{ strcpy(temp, $1); strcat(temp, " "); strcat(temp, type); strcpy(type, temp); }
 	;
 
@@ -235,13 +238,13 @@ init_declarator
 	;
 
 type_specifier
-	: VOID			{ $$ = "void"; }
-	| CHAR			{ $$ = "char"; }
-	| SHORT			{ $$ = "short"; }
-	| INT			{ printf("Trying INT\n"); $$ = "int"; ;printf("YO INT\n");}
-	| LONG			{ $$ = "long"; }
-	| SIGNED		{ $$ = "signed"; }
-	| UNSIGNED	    { $$ = "unsigned"; }
+	: VOID			
+	| CHAR			
+	| SHORT			
+	| INT			
+	| LONG			
+	| SIGNED		
+	| UNSIGNED	    
 	;
 
 type_specifier_list
@@ -250,17 +253,17 @@ type_specifier_list
 	;
 
 declarator
-	: direct_declarator
+	: direct_declarator           
 	;
 
 direct_declarator
-	: IDENTIFIER		    {   printf("yay\n"); printf("yay %d\n", yylineno); symbol_table_insert(symbol_table, $1, type, yylineno); printf("KK\n"); printf("%s\n", $1); }
+	: IDENTIFIER		    {  symbol_table_insert(symbol_table, $1, type, yylineno); }
 	| '(' declarator ')'
 	| direct_declarator '[' constant_expression ']'
 	| direct_declarator '[' ']'
-	| direct_declarator '(' parameter_type_list ')'
+	| direct_declarator '(' parameter_type_list ')'    
 	| direct_declarator '(' identifier_list ')'
-	| direct_declarator '(' ')'
+	| direct_declarator '(' ')'            
 	;
 
 

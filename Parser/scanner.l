@@ -26,22 +26,23 @@ letter              [a-zA-Z]
 alphanum            {letter}|{digit}
 keyword             char|int|main|float|double|short|long|unsigned|signed|main|while|for|break|if|else|continue|return|void|struct
 operator            "+"|"-"|"++"|"--"|"!"|"~"|"*"|"/"|"%"|">>"|"<<"|"&"|"^"|\||\|\||"="|">"|"<"|">="|"<="|"=="|"!="    
-function            ((_|{letter})({alphanum}|_)*)[ ]*[(][ ]*[)]
+ //function            ((_|{letter})({alphanum}|_)*)[ ]*[(][ ]*[)]
 escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
 
 /* Pattern Matching Rules */
 %%
+[\n]  	{ yylineno++; }
 " "                                                {}
 "#include"[ ]*"<"{letter}({alphanum})*".h>"        {}
 "#define"[ ]+(_|{letter})({alphanum})*[ ]*(.)+     {}
 
-"char"			   {  yylval = yytext; return CHAR; }
-"short"			   {  yylval = yytext; return SHORT; }
-"int"			      {  yylval = yytext; return INT; }
-"long"			   {  yylval = yytext; return LONG; }
-"signed"		      {  yylval = yytext; return SIGNED; }
-"unsigned"		   {  yylval = yytext; return UNSIGNED; }
-"void"			   {  yylval = yytext; return VOID; }
+"char"			   {  yylval.str = yytext; return CHAR; }
+"short"			   {  yylval.str = yytext; return SHORT; }
+"int"			      {  yylval.str = yytext; return INT; }
+"long"			   {  yylval.str = yytext; return LONG; }
+"signed"		      {  yylval.str = yytext; return SIGNED; }
+"unsigned"		   {  yylval.str = yytext; return UNSIGNED; }
+"void"			   {  yylval.str = yytext; return VOID; }
 "if"			      {  return IF; }
 "else"			   {  return ELSE; }
 "while"			   {  return WHILE; }
@@ -57,14 +58,14 @@ escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
                                                 exit(1);
                                              }
 
-("\'")(("\\"({escape_sequences}))|.)("\'")   { yylval = yytext; return CHAR_CONSTANT; }          
+("\'")(("\\"({escape_sequences}))|.)("\'")   { yylval.str = yytext; return CHAR_CONSTANT; }          
 
 ("\'")(((("\\")[^0abfnrtv\\\"\'][^\n\']*))|[^\n\''][^\n\'']+)("\'")     { 
                                                                            print_token(FORE_RED "ERROR: NOT A CHARACTER", yytext, yylineno); 
                                                                            exit(1);
                                                                         }
 
-("\"")[^\n\"]*("\"")                         { yylval = yytext; return STRING_CONSTANT; }
+("\"")[^\n\"]*("\"")                         { yylval.str = yytext; return STRING_CONSTANT; }
 
 ("\"")[^\n\"]*                               { 
                                                 print_token(FORE_RED "ERROR: UNCLOSED STRING", yytext, yylineno); 
@@ -73,18 +74,18 @@ escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
 
 
 {digit}+                                     { 
-                                                yylval = yytext; return INT_CONSTANT;
+                                                yylval.str = yytext; return INT_CONSTANT;
                                                 // Do we need the below? 
                                                 // symbol_table_insert(constant_table, yytext, "Integer", yylineno);
                                              }
 
 "-"?{digit}+\.({digit}+)?                    { 
-                                                yylval = yytext; return FLOAT_CONSTANT;
+                                                yylval.str = yytext; return FLOAT_CONSTANT;
                                                 // Do we need the below?
                                                 // symbol_table_insert(constant_table, yytext, "Floating point", yylineno);
                                              }
 
-(_|{letter})({alphanum}|_)*                  { yylval = yytext; return IDENTIFIER; }
+(_|{letter})({alphanum}|_)*                  { yylval.str = yytext; return IDENTIFIER; }
 
 {digit}?({letter}|_)({alphanum}|_)*          {
                                                 // Error
@@ -114,14 +115,6 @@ escape_sequences    0|a|b|f|n|r|t|v|"\\"|"\""|"\'"
 "|="        {  return OR_ASSIGN; }
 
 "."|"&"|"!"|"~"|"-"|"+"|"*"|"/"|"%"|"<"|">"|"^"|"|"|"?"            { return *yytext; }
-
-{function}                                   { 
-                                                // print_token("FUNCTION", yytext, yylineno);
-                                                // int i=0;
-                                                // for(i=0; yytext[i]!='\0' && yytext[i] !='('; ++i);
-                                                // yytext[i] ='\0';
-                                                // symbol_table_insert(symbol_table, yytext, "Function", yylineno);
-                                             }
 
 "["|"]"|"("|")"|"{"|"}"|","|";"              { return *yytext; }
 

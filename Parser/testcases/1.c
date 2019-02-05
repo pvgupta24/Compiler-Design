@@ -1,17 +1,12 @@
-#include<stdio.h>
-
 int main()
 {
-	int a = 5;
-
+	int a;
 	while(a>0)
 	{
-		printf("%d",a);
 		a--;
-		int b = 4;
+		int b;
 		while(b>0)
 		{
-			printf("%d", a*b);
 			b--;
 		}
 	}
