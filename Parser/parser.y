@@ -1,396 +1,300 @@
 /*
+* http://www.quut.com/c/ANSI-C-grammar-y.html
 * @author Shashank P, Praveen Gupta, Ashwin Joisa
-* Ref: http://cse.iitkgp.ac.in/~bivasm/notes/LexAndYaccTutorial.pdf
 */
 
-
-/* Auxiliary declarations*/
 %{
-    #include <stdio.h>
-    #include <stdbool.h>
-    #include <math.h>
-    #include <string.h>
-    
-    // #define YYSTYPE char*
+#include <stdio.h>
+#include <stdlib.h>
 
-    extern char yytext[];
-    extern int yylineno;
+#include "lib/symbol_table.h"
+#include "lib/misc.h"
 
-    /* ***Symbol Table*** */
-    #include "lib/misc.h"
-    #include "lib/symbol_table.h"
+#define DEBUGY 0
 
-    #define MAX_SYMBOLS_COUNT 1000
+#if defined(DEBUGY) && DEBUGY > 0
+        #define DEBUGY_PRINT(fmt, args...) fprintf(stderr, fmt, ##args)
+#else
+        #define DEBUGY_PRINT(fmt, args...) /* Don't do anything in release builds */
+#endif
 
-    symbol_node_t *symbol_table[MAX_SYMBOLS_COUNT];
-    symbol_node_t *constant_table[MAX_SYMBOLS_COUNT];
+int yyparse (void);
+int yylex();
+void yyerror(const char * s);
 
-    bool isValid = true;
-    char type[100];
-    char temp[100];
+#define MAX_NODES 1000
+
+symbol_node_t *symbol_table[MAX_NODES];
+symbol_node_t *constant_table[MAX_NODES];
+
+extern FILE *yyin, *yyout;
+extern char *yytext;
+// extern int yylineno;
+extern int yylineno;
+
+char type[100];
 
 %}
 
-/* ****Tokens**** */
-%token<str> IDENTIFIER STRING_CONSTANT CHAR_CONSTANT INT_CONSTANT FLOAT_CONSTANT SIZEOF
-%token INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
-%token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
-%token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
-%token XOR_ASSIGN OR_ASSIGN TYPE_NAME DEF
-%token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOID
-%token IF ELSE WHILE CONTINUE BREAK RETURN
-
-%type<str> type_specifier
-
-// Declare the start grammer rule for the program to be parsed
-%start start_state
+// %token INT FLOAT CHAR DOUBLE VOID RETURN
+%token SIGNED UNSIGNED LONG SHORT
+%token SWITCH BREAK CONTINUE CASE DEFAULT STRUCT RETURN
+%token FOR WHILE DO
+%token IF ELSE  
+%token INTEGER_FLOAT CONSTANT_FLOAT CONSTANT_STRING CONSTANT_CHAR
+%token INCLUDE
+// %token '(' ')'
 
 %union {
-	char *str;
-	int int_val;
+	char id[100];
 }
-%nonassoc NO_ELSE
-%nonassoc ELSE
-%left '<' '>' '=' GE_OP LE_OP EQ_OP NE_OP
-%left  '+'  '-'
-%left  '*'  '/' '%'
-%left  '|'
-%left  '&'
+%token <id> IDENTIFIER
+%token <id> INT
+%token <id> CHAR
+%token <id> FLOAT
+%token <id> DOUBLE
+%token <id> VOID
 
-%nonassoc UNARY
 
-// Use extension of LR parser algorithm to handle nondeterministic and ambigous grammers
-%glr-parser
+%right '=' PAS MAS DAS SAS           
+%left LOGIC_AND LOGIC_OR NOT INC_OP DEC_OP
+%left LE GE EQ NE LT GT             // LE <= GE >= EQ == NE != LT < GT >
+%left '+' '-' '*' '/' '%' '^' '&' '.'
 
-/* ******* Grammer Rules for parsing ******** */
-%%
-// Start State
-start_state
-	: global_declaration
-	| start_state global_declaration
+%start Begin
+
+%% 
+Begin   
+	: Function_Definition
+	| Declaration
+	| Include
+	| Function_Definition Begin
+	| Declaration Begin
+	| Include Begin
 	;
 
-global_declaration
-	: function_definition   
-	| declaration
+Include_Statement
+	: '#' INCLUDE LT IDENTIFIER GT
+	| '#' INCLUDE LT IDENTIFIER '.' IDENTIFIER GT
 	;
 
-function_definition
-	: declaration_specifiers declarator compound_statement  
-	| declarator compound_statement
+Include
+	: Include_Statement
 	;
 
-fundamental_exp
-	: IDENTIFIER 
-	| STRING_CONSTANT		{   symbol_table_insert(constant_table, $1, "string", yylineno); }
-	| CHAR_CONSTANT         {   symbol_table_insert(constant_table, $1, "char", yylineno); }
-	| FLOAT_CONSTANT	    {   symbol_table_insert(constant_table, $1, "float", yylineno); }
-	| INT_CONSTANT			{   symbol_table_insert(constant_table, $1, "int", yylineno); }
-	| '(' expression ')'
+Function_Definition
+	: Type IDENTIFIER '(' Formal_Param_List ')' Compound_Statement       {symbol_table_insert(symbol_table,$2,"function",yylineno);}
+	;
+
+Formal_Param_List
+	: Type IDENTIFIER                                {symbol_table_insert(symbol_table,$2,type,yylineno);DEBUGY_PRINT("FLIST Call 1\n");}
+	| Type '*' IDENTIFIER                                   {symbol_table_insert(symbol_table,$3,type,yylineno);DEBUGY_PRINT("FLIST Call 2\n");}
+	| Type Array_Notation                            {DEBUGY_PRINT("FLIST Call 3\n");}
+	| Type IDENTIFIER ',' Formal_Param_List                   {symbol_table_insert(symbol_table,$2,type,yylineno);DEBUGY_PRINT("FLIST Call 4\n");}
+	| Type '*' IDENTIFIER ',' Formal_Param_List               {symbol_table_insert(symbol_table,$3,type,yylineno);DEBUGY_PRINT("FLIST Call 5\n");}
+	| Type Array_Notation ',' Formal_Param_List        {DEBUGY_PRINT("FLIST Call 6\n");}
+	|
 	;
 
 
-secondary_exp
-	: fundamental_exp
-	| secondary_exp '[' expression ']'
-	| secondary_exp '(' ')'
-	| secondary_exp '(' arg_list ')'
-	| secondary_exp '.' IDENTIFIER
-	| secondary_exp INC_OP
-	| secondary_exp DEC_OP
-	;
+Declaration
+    :  Type Identifier_List ';'    {;}
+    ;
 
-arg_list
-	: assignment_expression
-	| arg_list ',' assignment_expression
-	;
+Type
+    : INT {strcpy(type,$1);}
+    | FLOAT {strcpy(type,$1);}
+    | VOID {strcpy(type,$1);}
+    | CHAR {strcpy(type,$1);}
+    | DOUBLE {strcpy(type,$1);}
+    | Modifiers INT {strcpy(type,$2);}
+    | Modifiers FLOAT {strcpy(type,$2);}
+    | Modifiers DOUBLE {strcpy(type,$2);}
+    | Modifiers CHAR {strcpy(type,$2);}
+    ;
 
-unary_expression
-	: secondary_exp
-	| INC_OP unary_expression
-	| DEC_OP unary_expression
-	| unary_operator typecast_exp
-	;
+Modifiers
+    : SHORT | LONG | UNSIGNED | SIGNED
+    ;
 
-unary_operator
-	: '&'
-	| '*'
-	| '+'
-	| '-'
-	| '~'
-	| '!'
-	;
+Array_Notation
+    : IDENTIFIER '[' ']' {char ar[] = "arr - "; symbol_table_insert(symbol_table,$1,strcat(ar, type),yylineno);}
+    | IDENTIFIER '[' Expression ']' {char ar[] = "arr - "; symbol_table_insert(symbol_table,$1,strcat(ar, type),yylineno);}
+    ;
 
-typecast_exp
-	: unary_expression
-	| '(' type_name ')' typecast_exp
-	;
+Identifier_List
+    : Array_Notation
+    | IDENTIFIER ',' Identifier_List {symbol_table_insert(symbol_table,$1,type,yylineno);}
+    | '*' IDENTIFIER ',' Identifier_List {symbol_table_insert(symbol_table,$2,type,yylineno);}
+    | Array_Notation ',' Identifier_List 
+    | IDENTIFIER {symbol_table_insert(symbol_table,$1,type,yylineno);} 
+    | '*' IDENTIFIER {symbol_table_insert(symbol_table,$2,type,yylineno);}
+    | Define_Assign ',' Identifier_List
+    | Define_Assign 
+    ;
 
-multdivmod_exp
-	: typecast_exp
-	| multdivmod_exp '*' typecast_exp
-	| multdivmod_exp '/' typecast_exp
-	| multdivmod_exp '%' typecast_exp
-	;
+Define_Assign
+    : IDENTIFIER Assignment_Operator Expression                   {symbol_table_insert(symbol_table,$1,type,yylineno);DEBUGY_PRINT("Assignment Rule 1 called\n");}  
+    | '*' IDENTIFIER Assignment_Operator Expression            {symbol_table_insert(symbol_table,$2,type,yylineno);}
+    | Array_Notation Assignment_Operator Expression                   
+    ;
 
-addsub_exp
-	: multdivmod_exp
-	| addsub_exp '+' multdivmod_exp
-	| addsub_exp '-' multdivmod_exp
-	;
+Param_List
+    : Expression
+    | Expression ',' Param_List
+    | 
+    ;
 
-shift_exp
-	: addsub_exp
-	| shift_exp LEFT_OP addsub_exp
-	| shift_exp RIGHT_OP addsub_exp
-	;
+Assignment
+    : IDENTIFIER Assignment_Operator Expression                   {DEBUGY_PRINT("Assignment Rule 1 called\n");}
+    | '*' IDENTIFIER Assignment_Operator Expression         
+    | Array_Notation Assignment_Operator Expression
+    | Primary
+    ;
 
-relational_expression
-	: shift_exp
-	| relational_expression '<' shift_exp
-	| relational_expression '>' shift_exp
-	| relational_expression LE_OP shift_exp
-	| relational_expression GE_OP shift_exp
-	;
-
-equality_expression
-	: relational_expression
-	| equality_expression EQ_OP relational_expression
-	| equality_expression NE_OP relational_expression
-	;
-
-and_expression
-	: equality_expression
-	| and_expression '&' equality_expression
-	;
-
-exor_expression
-	: and_expression
-	| exor_expression '^' and_expression
-	;
-
-unary_or_expression
-	: exor_expression
-	| unary_or_expression '|' exor_expression
-	;
-
-logical_and_expression
-	: unary_or_expression
-	| logical_and_expression AND_OP unary_or_expression
-	;
-
-logical_or_expression
-	: logical_and_expression
-	| logical_or_expression OR_OP logical_and_expression
-	;
-
-conditional_expression
-	: logical_or_expression
-	| logical_or_expression '?' expression ':' conditional_expression
-	;
-
-assignment_expression
-	: conditional_expression
-	| unary_expression assignment_operator assignment_expression
-	;
-
-assignment_operator
+Assignment_Operator
 	: '='
-	| MUL_ASSIGN
-	| DIV_ASSIGN
-	| MOD_ASSIGN
-	| ADD_ASSIGN
-	| SUB_ASSIGN
-	| LEFT_ASSIGN
-	| RIGHT_ASSIGN
-	| AND_ASSIGN
-	| XOR_ASSIGN
-	| OR_ASSIGN
+	| PAS
+	| SAS
+	| MAS
+	| DAS
 	;
 
-expression
-	: assignment_expression
-	| expression ',' assignment_expression
-	;
-
-constant_expression
-	: conditional_expression
-	;
-
-declaration
-	: declaration_specifiers init_declarator_list ';'
-	| error
-	;
-
-declaration_specifiers
-	: type_specifier	{ strcpy(type, $1); }
-	| type_specifier declaration_specifiers	{ strcpy(temp, $1); strcat(temp, " "); strcat(temp, type); strcpy(type, temp); }
-	;
-
-init_declarator_list
-	: init_declarator
-	| init_declarator_list ',' init_declarator
-	;
-
-init_declarator
-	: declarator
-	| declarator '=' init
-	;
-
-type_specifier
-	: VOID			
-	| CHAR			
-	| SHORT			
-	| INT			
-	| LONG			
-	| SIGNED		
-	| UNSIGNED	    
-	;
-
-type_specifier_list
-	: type_specifier type_specifier_list
-	| type_specifier
-	;
-
-declarator
-	: direct_declarator           
-	;
-
-direct_declarator
-	: IDENTIFIER		    {  symbol_table_insert(symbol_table, $1, type, yylineno); }
-	| '(' declarator ')'
-	| direct_declarator '[' constant_expression ']'
-	| direct_declarator '[' ']'
-	| direct_declarator '(' parameter_type_list ')'    
-	| direct_declarator '(' identifier_list ')'
-	| direct_declarator '(' ')'            
-	;
+Expression
+    : Logical_Expr
+    ;
 
 
-parameter_type_list
-	: parameter_list
+Logical_Expr
+    : Relational_Expr
+    | Logical_Expr LOGIC_AND Relational_Expr
+    | Logical_Expr LOGIC_OR Relational_Expr
+    | NOT Relational_Expr 
+    ;
+
+Relational_Expr
+    : Additive_Expr
+    | Relational_Expr GT Additive_Expr
+    | Relational_Expr LT Additive_Expr
+    | Relational_Expr GE Additive_Expr
+    | Relational_Expr LE Additive_Expr
+    | Relational_Expr EQ Additive_Expr
+    | Relational_Expr NE Additive_Expr
+    ;
+
+Additive_Expr
+    : Multiplicative_Expr
+    | Additive_Expr '+' Multiplicative_Expr
+    | Additive_Expr '-' Multiplicative_Expr
+    ;
+
+Multiplicative_Expr
+    : Primary
+    | Multiplicative_Expr '*' Primary
+    | Multiplicative_Expr '/' Primary
+    | Multiplicative_Expr '%' Primary
+    ;
+
+Primary
+    : '(' Expression ')'
+    | INTEGER_FLOAT | CONSTANT_FLOAT | CONSTANT_CHAR | CONSTANT_STRING      //{symbol_table_insert(constant_table, $1,type,yylineno) }
+    | IDENTIFIER                           {DEBUGY_PRINT("Primary Identifier\n");   }
+    | '*' IDENTIFIER                       {DEBUGY_PRINT("Pointer Identifier\n");   }
+    | '&' IDENTIFIER                       {DEBUGY_PRINT("Address of Identifier\n");}
+    | '-' Primary
+    | '+' Primary
+    | Array_Notation
+    | Function_Call
+    | INC_OP IDENTIFIER
+    | IDENTIFIER INC_OP
+    | DEC_OP IDENTIFIER
+    | IDENTIFIER DEC_OP
+    ;
+
+Compound_Statement
+    : '{' Statement_List '}'
 	;
 
-parameter_list
-	: parameter_declaration
-	| parameter_list ',' parameter_declaration
-	;
+Statement_List
+    : Statement Statement_List
+    |
+    ;
 
-parameter_declaration
-	: declaration_specifiers declarator
-	| declaration_specifiers abstract_declarator
-	| declaration_specifiers
-	;
+Statement
+    : While_Statement 
+    | Declaration   
+    | For_Statement  
+    | If_Statement  
+    | Assignment    ';'
+    | Return_Statement    
+    | Do_While_Statement      
+    | BREAK ';'
+    | CONTINUE ';'                    
+	| ';'
+    ; 
 
-identifier_list
-	: IDENTIFIER { printf("yay2\n"); }
-	| identifier_list ',' IDENTIFIER
-	;
+Return_Statement
+    : RETURN Expression ';'   {DEBUGY_PRINT("Return Statement Call\n");}
+    ;
 
-type_name
-	: type_specifier_list
-	| type_specifier_list abstract_declarator
-	;
+While_Statement
+    : WHILE '(' Expression ')' Statement                                                        
+    | WHILE '(' Expression ')' Compound_Statement
+    ;
 
-abstract_declarator
-	: direct_abstract_declarator
-	;
+Do_While_Statement
+    : DO Compound_Statement WHILE '(' Expression ')' ';'
+    ;
 
-direct_abstract_declarator
-	: '(' abstract_declarator ')'
-	| '[' ']'
-	| '[' constant_expression ']'
-	| direct_abstract_declarator '[' ']'
-	| direct_abstract_declarator '[' constant_expression ']'
-	| '(' ')'
-	| '(' parameter_type_list ')'
-	| direct_abstract_declarator '(' ')'
-	| direct_abstract_declarator '(' parameter_type_list ')'
-	;
 
-init
-	: assignment_expression
-	| '{' init_list '}'
-	| '{' init_list ',' '}'
-	;
+For_Statement
+    : FOR '(' Assignment ';' Expression ';' Assignment ')' Statement 
+    | FOR '(' Assignment ';' Expression ';' Assignment ')' Compound_Statement 
+    ;
 
-init_list
-	: init
-	| init_list ',' init
-	;
+If_Statement
+    : IF '(' Expression ')' Statement Else_Statement     
+    | IF '(' Expression ')' Compound_Statement Else_Statement
+    ;
 
-statement
-	: compound_statement
-	| expression_statement
-	| selection_statement
-	| iteration_statement
-	| jump_statement
-	;
+Else_Statement
+    : ELSE Compound_Statement
+    | ELSE Statement
+    |
+    ;
 
-compound_statement
-	: '{' '}'
-	| '{' statement_list '}'
-	| '{' declaration_list '}'
-	| '{' declaration_list statement_list '}'
-	| '{' declaration_list statement_list declaration_list statement_list '}'
-	| '{' declaration_list statement_list declaration_list '}'
-	| '{' statement_list declaration_list statement_list '}'
-	;
+Function_Call
+    : IDENTIFIER '(' Param_List ')'           {DEBUGY_PRINT("Function Call\n");} 
+    ;
 
-declaration_list
-	: declaration
-	| declaration_list declaration
-	;
-
-statement_list
-	: statement
-	| statement_list statement
-	;
-
-expression_statement
-	: ';'
-	| expression ';'
-	;
-
-selection_statement
-	: IF '(' expression ')' statement %prec NO_ELSE
-	| IF '(' expression ')' statement ELSE statement
-	;
-
-iteration_statement
-	: WHILE '(' expression ')' statement
-	;
-
-jump_statement
-	: CONTINUE ';'
-	| BREAK ';'
-	| RETURN ';'
-	| RETURN expression ';'
-	;
 %%
 
-#include "y.tab.h"
 
-/* User SubRoutines */
-int main(){
+#include<ctype.h>
+int count=0;
 
-    yyparse();
+int main(int argc, char *argv[])
+{
+	yyin = fopen(argv[1], "r");
+    
+    symbol_table_initialize(symbol_table);
+    symbol_table_initialize(constant_table);
+    if(!yyparse())
+        printf("\nParsing complete\n");
+    else
+        printf(FORE_RED "\nParsing failed\n" RESET);
 
-    if(!isValid){
-        printf(FORE_RED SYMBOL_CROSS "  Invalid Expression\n\n" RESET);
-
-        return -1;
-    }
-
-    printf(FORE_GRN SYMBOL_TICK "  Valid Expression\n\n" RESET);
+    fclose(yyin);
 
     symbol_table_print(symbol_table, "Symbol Table");
     symbol_table_print(constant_table, "Constant Table");
     
+    symbol_table_free(symbol_table);
+    symbol_table_free(constant_table);
+
     return 0;
 }
-
-void yyerror(char *s){
-    isValid = false;
-    fprintf(stderr, FORE_RED "===== Line %d ======\n%s\n" RESET, yylineno, s); 
+         
+void yyerror(const char *s) {
+	printf(FORE_RED "%d : %s %s\n" RESET, yylineno, s, yytext );
 }
