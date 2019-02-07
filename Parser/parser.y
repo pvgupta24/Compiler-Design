@@ -10,16 +10,8 @@
 #include "lib/symbol_table.h"
 #include "lib/misc.h"
 
-#define DEBUGY 0
-
-#if defined(DEBUGY) && DEBUGY > 0
-        #define DEBUGY_PRINT(fmt, args...) fprintf(stderr, fmt, ##args)
-#else
-        #define DEBUGY_PRINT(fmt, args...) /* Don't do anything in release builds */
-#endif
-
-int yyparse (void);
-int yylex();
+// Trace function with variable number of arguement
+#define trace(fmt, args...) //fprintf(stderr, fmt, ##args)
 void yyerror(const char * s);
 
 #define MAX_NODES 1000
@@ -41,9 +33,12 @@ char type[100];
 %token SWITCH BREAK CONTINUE CASE DEFAULT STRUCT RETURN
 %token FOR WHILE DO
 %token IF ELSE  
-%token INTEGER_FLOAT CONSTANT_FLOAT CONSTANT_STRING CONSTANT_CHAR
+%token <id> CONSTANT_INTEGER
+%token <id> CONSTANT_FLOAT
+%token <id> CONSTANT_STRING
+%token <id> CONSTANT_CHAR
+
 %token INCLUDE
-// %token '(' ')'
 
 %union {
 	char id[100];
@@ -87,12 +82,12 @@ Function_Definition
 	;
 
 Formal_Param_List
-	: Type IDENTIFIER                                {symbol_table_insert(symbol_table,$2,type,yylineno);DEBUGY_PRINT("FLIST Call 1\n");}
-	| Type '*' IDENTIFIER                                   {symbol_table_insert(symbol_table,$3,type,yylineno);DEBUGY_PRINT("FLIST Call 2\n");}
-	| Type Array_Notation                            {DEBUGY_PRINT("FLIST Call 3\n");}
-	| Type IDENTIFIER ',' Formal_Param_List                   {symbol_table_insert(symbol_table,$2,type,yylineno);DEBUGY_PRINT("FLIST Call 4\n");}
-	| Type '*' IDENTIFIER ',' Formal_Param_List               {symbol_table_insert(symbol_table,$3,type,yylineno);DEBUGY_PRINT("FLIST Call 5\n");}
-	| Type Array_Notation ',' Formal_Param_List        {DEBUGY_PRINT("FLIST Call 6\n");}
+	: Type IDENTIFIER                                  {symbol_table_insert(symbol_table,$2,type,yylineno);trace("FLIST Call 1\n");}
+	| Type '*' IDENTIFIER                              {symbol_table_insert(symbol_table,$3,type,yylineno);trace("FLIST Call 2\n");}
+	| Type Array_Notation                              {trace("FLIST Call 3\n");}
+	| Type IDENTIFIER ',' Formal_Param_List            {symbol_table_insert(symbol_table,$2,type,yylineno);trace("FLIST Call 4\n");}
+	| Type '*' IDENTIFIER ',' Formal_Param_List        {symbol_table_insert(symbol_table,$3,type,yylineno);trace("FLIST Call 5\n");}
+	| Type Array_Notation ',' Formal_Param_List        {trace("FLIST Call 6\n");}
 	|
 	;
 
@@ -102,15 +97,15 @@ Declaration
     ;
 
 Type
-    : INT {strcpy(type,$1);}
-    | FLOAT {strcpy(type,$1);}
-    | VOID {strcpy(type,$1);}
-    | CHAR {strcpy(type,$1);}
-    | DOUBLE {strcpy(type,$1);}
-    | Modifiers INT {strcpy(type,$2);}
-    | Modifiers FLOAT {strcpy(type,$2);}
-    | Modifiers DOUBLE {strcpy(type,$2);}
-    | Modifiers CHAR {strcpy(type,$2);}
+    : INT                       {strcpy(type, $1);}
+    | FLOAT                     {strcpy(type, $1);}
+    | VOID                      {strcpy(type, $1);}
+    | CHAR                      {strcpy(type, $1);}
+    | DOUBLE                    {strcpy(type, $1);}
+    | Modifiers INT             {strcpy(type, $2);}
+    | Modifiers FLOAT           {strcpy(type, $2);}
+    | Modifiers DOUBLE          {strcpy(type, $2);}
+    | Modifiers CHAR            {strcpy(type, $2);}
     ;
 
 Modifiers
@@ -118,24 +113,28 @@ Modifiers
     ;
 
 Array_Notation
-    : IDENTIFIER '[' ']' {char ar[] = "arr - "; symbol_table_insert(symbol_table,$1,strcat(ar, type),yylineno);}
-    | IDENTIFIER '[' Expression ']' {char ar[] = "arr - "; symbol_table_insert(symbol_table,$1,strcat(ar, type),yylineno);}
+    : IDENTIFIER '[' ']'            {    
+                                        symbol_table_insert(symbol_table, $1, strcat(type, " : array"), yylineno);
+                                    }
+    | IDENTIFIER '[' Expression ']' {
+                                        symbol_table_insert(symbol_table,$1, strcat(type, " : array"),yylineno);
+                                    }
     ;
 
 Identifier_List
     : Array_Notation
-    | IDENTIFIER ',' Identifier_List {symbol_table_insert(symbol_table,$1,type,yylineno);}
-    | '*' IDENTIFIER ',' Identifier_List {symbol_table_insert(symbol_table,$2,type,yylineno);}
+    | IDENTIFIER ',' Identifier_List        {symbol_table_insert(symbol_table,$1,type,yylineno);}
+    | '*' IDENTIFIER ',' Identifier_List    {symbol_table_insert(symbol_table,$2,type,yylineno);}
     | Array_Notation ',' Identifier_List 
-    | IDENTIFIER {symbol_table_insert(symbol_table,$1,type,yylineno);} 
-    | '*' IDENTIFIER {symbol_table_insert(symbol_table,$2,type,yylineno);}
+    | IDENTIFIER                            {symbol_table_insert(symbol_table,$1,type,yylineno);} 
+    | '*' IDENTIFIER                        {symbol_table_insert(symbol_table,$2,type,yylineno);}
     | Define_Assign ',' Identifier_List
     | Define_Assign 
     ;
 
 Define_Assign
-    : IDENTIFIER Assignment_Operator Expression                   {symbol_table_insert(symbol_table,$1,type,yylineno);DEBUGY_PRINT("Assignment Rule 1 called\n");}  
-    | '*' IDENTIFIER Assignment_Operator Expression            {symbol_table_insert(symbol_table,$2,type,yylineno);}
+    : IDENTIFIER Assignment_Operator Expression          {symbol_table_insert(symbol_table,$1,type,yylineno);trace("Assignment Rule 1 called\n");}  
+    | '*' IDENTIFIER Assignment_Operator Expression      {symbol_table_insert(symbol_table,$2,type,yylineno);}
     | Array_Notation Assignment_Operator Expression                   
     ;
 
@@ -146,7 +145,7 @@ Param_List
     ;
 
 Assignment
-    : IDENTIFIER Assignment_Operator Expression                   {DEBUGY_PRINT("Assignment Rule 1 called\n");}
+    : IDENTIFIER Assignment_Operator Expression           {trace("Assignment Rule 1 called\n");}
     | '*' IDENTIFIER Assignment_Operator Expression         
     | Array_Notation Assignment_Operator Expression
     | Primary
@@ -166,7 +165,6 @@ Assignment_Operator
 	| OR_ASSIGN
 	;
 
-	;
 
 Expression
     : Logical_Expr
@@ -205,10 +203,13 @@ Multiplicative_Expr
 
 Primary
     : '(' Expression ')'
-    | INTEGER_FLOAT | CONSTANT_FLOAT | CONSTANT_CHAR | CONSTANT_STRING      //{symbol_table_insert(constant_table, $1,type,yylineno) }
-    | IDENTIFIER                           {DEBUGY_PRINT("Primary Identifier\n");   }
-    | '*' IDENTIFIER                       {DEBUGY_PRINT("Pointer Identifier\n");   }
-    | '&' IDENTIFIER                       {DEBUGY_PRINT("Address of Identifier\n");}
+    | CONSTANT_INTEGER     {symbol_table_insert(constant_table, $1, type, yylineno); trace("CONSTANT_INTEGER\n");}
+    | CONSTANT_FLOAT       {symbol_table_insert(constant_table, $1, type, yylineno); trace("CONSTANT_FLOAT\n");}
+    | CONSTANT_CHAR        {symbol_table_insert(constant_table, $1, type, yylineno); trace("CONSTANT_CHAR\n");}
+    | CONSTANT_STRING      {symbol_table_insert(constant_table, $1, type, yylineno); trace("CONSTANT_STRING\n");}
+    | IDENTIFIER           {trace("Primary Identifier\n");}
+    | '*' IDENTIFIER       {trace("Pointer Identifier\n");}
+    | '&' IDENTIFIER       {trace("Address of Identifier\n");}
     | '-' Primary
     | '+' Primary
     | Array_Notation
@@ -242,7 +243,7 @@ Statement
     ; 
 
 Return_Statement
-    : RETURN Expression ';'   {DEBUGY_PRINT("Return Statement Call\n");}
+    : RETURN Expression ';'   {trace("Return Statement Call\n");}
     ;
 
 While_Statement
@@ -272,14 +273,13 @@ Else_Statement
     ;
 
 Function_Call
-    : IDENTIFIER '(' Param_List ')'           {DEBUGY_PRINT("Function Call\n");} 
+    : IDENTIFIER '(' Param_List ')'           {trace("Function Call\n");} 
     ;
 
 %%
 
 
-#include<ctype.h>
-int count=0;
+// #include<ctype.h>
 
 int main(int argc, char *argv[])
 {
@@ -287,6 +287,7 @@ int main(int argc, char *argv[])
     
     symbol_table_initialize(symbol_table);
     symbol_table_initialize(constant_table);
+
     if(!yyparse())
         printf("\nParsing complete\n");
     else

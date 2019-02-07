@@ -61,6 +61,7 @@ y.tab.h
 *.vscode/*
 Calculator/
 temp/
+Parser2/
 
 # Outputs
 */outputs/*

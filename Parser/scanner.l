@@ -1,23 +1,22 @@
+/*
+* http://www.quut.com/c/ANSI-C-grammar-l-2011.html#comment
+* @author Shashank P, Praveen Gupta, Ashwin Joisa
+*/
+
 %{
 
-    #define DEBUG 0
+#define trace(fmt, args...) //fprintf(stderr, fmt, ##args)
 
-    #if defined(DEBUG) && DEBUG > 0
-        #define DEBUG_PRINT(fmt, args...) fprintf(stderr, fmt, ##args)
-    #else
-        #define DEBUG_PRINT(fmt, args...) /* Don't do anything in release builds */
-    #endif
+#define RED   "\x1B[31m"
+#define RESET "\x1B[0m"
+#define GRN   "\x1B[32m"
+#define BLU   "\x1B[34m"
 
-    #define RED   "\x1B[31m"
-    #define RESET "\x1B[0m"
-    #define GRN   "\x1B[32m"
-    #define BLU   "\x1B[34m"
+#include "y.tab.h"
 
-    #include "y.tab.h"
-
-    int scope = 0;
-    // int yylineno = 1;
-    int comment = 0;
+int scope = 0;
+// int yylineno = 1;
+int comment = 0;
 %}
 
 keyword         char|int|float|short|long|unsigned|signed|main|while|for|break|case|if|else|continue|default|do|return|void|struct|switch
@@ -28,419 +27,366 @@ function        (_|{letter})({letter}|{number}|_)*"()"
 
 %option yylineno
 
+
 %%
 \/\/(.)*[\n]                        {
     //yylineno++;
     }
 
-[/][*]                              { DEBUG_PRINT("%-20s%20s%20d\n", "OPEN COMMENT",yytext, yylineno); comment++; }
-[*][/]                              { DEBUG_PRINT("%-20s%20s%20d\n", "CLOSE COMMENT",yytext, yylineno); comment--; }
+"/*"                                { commentfunc(); }
 
-
-#                                   { if(!comment){ 
-                                            DEBUG_PRINT("%-20s%20s%20d\n","PREPROCESSOR", yytext, yylineno);
+#                                   {  
+                                            trace("%-20s%20s%20d\n","PREPROCESSOR", yytext, yylineno);
                                             return *yytext;  
-                                        }
+                                        
                                     }
 
-include                             { if(!comment){ 
-                                            DEBUG_PRINT("%-20s%20s%20d\n","PREPROCESSOR", yytext, yylineno);
+include                             {  
+                                            trace("%-20s%20s%20d\n","PREPROCESSOR", yytext, yylineno);
                                             return INCLUDE;  
-                                        }
+                                        
                                     }
 
 [\n]                                { //yylineno++; 
                                     }
 
-[{]                                 { if(!comment){
-                                            DEBUG_PRINT("%-20s%20s%20d\n","LEFT BRACE", yytext, yylineno);
+[{]                                 { 
+                                            trace("%-20s%20s%20d\n","LEFT BRACE", yytext, yylineno);
                                             scope++;
                                             return *yytext;
-                                        }  
+                                        
                                     }
-[}]                                 { if(!comment){
-                                            DEBUG_PRINT("%-20s%20s%20d\n","RIGHT BRACE", yytext, yylineno);
+[}]                                 { 
+                                            trace("%-20s%20s%20d\n","RIGHT BRACE", yytext, yylineno);
                                             scope--;
                                             return *yytext;
-                                        }  
+                                        
                                     }
 
-\"[^"\n]*["\n]                      { if(!comment) {
+\"[^"\n]*["\n]                      { 
                                         if(yytext[yyleng-1]!='"'){
-                                            DEBUG_PRINT(RED "Error : Quote unbalanced at line number %d\n" RESET,yylineno);
+                                            trace(RED "Error : Quote unbalanced at line number %d\n" RESET,yylineno);
                                             //yylineno++;
                                         }
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "CONSTANT_STRING", yytext, yylineno);
+                                        trace("%-20s%20s%20d\n", "CONSTANT_STRING", yytext, yylineno);
                                         // strcpy(yylval, yytext);
-                                        //insertSymbolItem(yytext, "CONSTANT_STRING", yylineno, 1);
                                         return CONSTANT_STRING;
-                                      }
+                                      
                                     }
 
-int                                 { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+int                                 { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
 										strcpy(yylval.id, yytext);
                                         return INT;
-                                      }
+                                      
                                     }
 
-float                              { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+float                               { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
 										strcpy(yylval.id, yytext);
                                         return FLOAT;
-                                      }
+                                      
                                     }
-char                               { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+char                                { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
 										strcpy(yylval.id, yytext);
                                         return CHAR;
-                                      }
+                                      
                                     }
-double                             { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+double                              { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
 										strcpy(yylval.id, yytext);
                                         return DOUBLE;
-                                      }
+                                      
                                     }
-void                               { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+void                                { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
 										strcpy(yylval.id, yytext);
                                         return VOID;
-                                      }
+                                      
                                     }
-signed                             { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+signed                              { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return SIGNED;
-                                      }
+                                      
                                     }
-unsigned                           { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+unsigned                            { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return UNSIGNED;
-                                      }
+                                      
                                     }
-long                               { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+long                                { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return LONG;
-                                      }
+                                      
                                     }
-short                              { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+short                               { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return SHORT;
-                                      }
+                                      
                                     }
-switch                             { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+switch                              { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return SWITCH;
-                                      }
+                                      
                                     }
-break                              { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+break                               { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return BREAK;
-                                      }
+                                      
                                     }
-continue                           { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+continue                            { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return CONTINUE;
-                                      }
                                     }
-case                               { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+case                                { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return CASE;
-                                      }
                                     }
-default                           { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+default                             { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return DEFAULT;
-                                      }
+                                      
                                     }
-for                                { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+for                                 { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return FOR;
-                                      }
+                                      
                                     }
-while                              { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+while                               { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return WHILE;
-                                      }
+                                      
                                     }
-do                                 { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+do                                  { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return DO;
-                                      }
+                                      
                                     }
-if                                 { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+if                                  { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return IF;
-                                      }
+                                      
                                     }
-else                               { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+else                                { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return ELSE;
-                                      }
                                     }
-struct                             { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+struct                              { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return STRUCT;
-                                      }
                                     }
-return                             { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
+return                              { 
+                                        trace("%-20s%20s%20d\n", "KEYWORD", yytext, yylineno);
                                         return RETURN;
-                                      }
                                     }
                                                                                                             
 
-[(]                                 { if(!comment) {
-                                            DEBUG_PRINT("%-20s%20s%20d\n", "OPEN PARANTHESIS", yytext, yylineno);
-                                            return *yytext;
-                                            // return OPEN_PAR;
-                                        }
+[(]                                 { 
+                                        trace("%-20s%20s%20d\n", "OPEN PARANTHESIS", yytext, yylineno);
+                                        return *yytext;
                                     }
 
-[)]                                 { if(!comment) {
-                                            DEBUG_PRINT("%-20s%20s%20d\n", "CLOSE PARANTHESIS", yytext, yylineno);
-                                            return *yytext;
-                                            // return CLOSE_PAR;
-                                        }
+[)]                                 { 
+                                        trace("%-20s%20s%20d\n", "CLOSE PARANTHESIS", yytext, yylineno);
+                                        return *yytext;
                                     }
-[\[]                                { if(!comment) {
-                                            DEBUG_PRINT("%-20s%20s%20d\n", "SQUARE BRACKETS", yytext, yylineno);
-                                            return *yytext;
-                                        } 
+[\[]                                { 
+                                        trace("%-20s%20s%20d\n", "SQUARE BRACKETS", yytext, yylineno);
+                                        return *yytext;
                                     }
 
-[\]]                                { if(!comment) {
-                                            DEBUG_PRINT("%-20s%20s%20d\n", "SQUARE BRACKETS", yytext, yylineno);
-                                            return *yytext;
-                                        } 
+[\]]                                { 
+                                        trace("%-20s%20s%20d\n", "SQUARE BRACKETS", yytext, yylineno);
+                                        return *yytext;
                                     }
 
-[,]                                 { if(!comment) {
-                                            DEBUG_PRINT("%-20s%20s%20d\n", "COMMA", yytext, yylineno);
-                                            return *yytext;
-                                        } 
+[,]                                 { 
+                                        trace("%-20s%20s%20d\n", "COMMA", yytext, yylineno);
+                                        return *yytext;
                                     } 
 
 
 [\t ]                               { ; }
 
-[;]                                 { if(!comment) {
-                                            DEBUG_PRINT("%-20s%20s%20d\n", "SEMI COLON", yytext, yylineno);
-                                            return *yytext;
-                                        } 
+[;]                                 { 
+                                        trace("%-20s%20s%20d\n", "SEMI COLON", yytext, yylineno);
+                                        return *yytext;
                                     }
 
-\'.\'                               { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "CHARACTER", yytext, yylineno); 
-                                        //insertSymbolItem(yytext, "CHARACTER", yylineno, 1);
+\'.\'                               { 
+                                        trace("%-20s%20s%20d\n", "CHARACTER", yytext, yylineno); 
                                         // strcpy(yylval, yytext);
+                                        strcpy(yylval.id, yytext);
                                         return CONSTANT_CHAR;
-                                        }
                                     }
 
-{number}+(\.{number}+)?e{number}+    { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "FLOAT EXP FORM", yytext, yylineno); 
-                                        //insertSymbolItem(yytext, "FLOAT", yylineno, 1);
+{number}+(\.{number}+)?e{number}+    { 
+                                        trace("%-20s%20s%20d\n", "FLOAT EXP FORM", yytext, yylineno); 
                                         // yylval = atof(yytext);
+                                        strcpy(yylval.id, yytext);
                                         return CONSTANT_FLOAT;
-                                        }
                                     } 
 
-{number}+\.{number}+                { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "FLOAT NUMBER", yytext, yylineno); 
-                                        //insertSymbolItem(yytext, "FLOAT", yylineno, 1);
+{number}+\.{number}+                { 
+                                        trace("%-20s%20s%20d\n", "FLOAT NUMBER", yytext, yylineno); 
                                         //yylval = atof(yytext);
+                                        strcpy(yylval.id, yytext);
                                         return CONSTANT_FLOAT;
-                                        }
                                     } 
 
 
-{number}+                           { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "NUMBER", yytext, yylineno); 
-                                        //insertSymbolItem(yytext, "INTEGER", yylineno, 1);
+{number}+                           { 
+                                        trace("%-20s%20s%20d\n", "NUMBER", yytext, yylineno); 
                                        // yylval = atoi(yytext);
-                                        return INTEGER_FLOAT;
-                                        }
+                                        strcpy(yylval.id, yytext);
+                                        return CONSTANT_INTEGER;
                                     }    
 
-(_|{letter})({letter}|{number}|_)*  { if(!comment){
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "IDENTIFIER", yytext, yylineno);
-                                        /*if(!lookUpSymbolItem(yytext))
-                                            insertSymbolItem(yytext, "IDENTIFIER", yylineno, 0);*/
-									
+(_|{letter})({letter}|{number}|_)*  { 
+                                        trace("%-20s%20s%20d\n", "IDENTIFIER", yytext, yylineno);
                                         strcpy(yylval.id, yytext);
                                         return IDENTIFIER;
-                                      }
                                     }
 
-"+"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"+"                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return *yytext;
-                                        }                   
                                     }
-"-"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"-"                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return *yytext;
-                                        }                   
                                     }
-"*"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"*"                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return *yytext;
-                                        }                   
                                     }
-"/"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"/"                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return *yytext;
-                                        }                   
                                     }
 
-"%"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"%"                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return *yytext;
-                                        }                   
                                     }
 
-"^"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"^"                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return *yytext;
-                                        }                   
                                     }
 
-"&"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"&"                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return *yytext;
-                                        }                   
                                     }
-"."                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"."                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return *yytext;
-                                        }                   
-                                    }
-"=="                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+                                    }                   
+"=="                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return EQ;
-                                        }                   
                                     }
-"="                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"="                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return *yytext;
-                                        }                   
                                     }
-"!="                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"!="                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return NE;
-                                        }                   
                                     }
-"<"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"<"                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return LT;
-                                        }                   
                                     }
-">"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+">"                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return GT;
-                                        }                   
                                     }
-"<="                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"<="                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return LE;
-                                        }                   
                                     }
 
-"+="                                { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"+="                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return ADD_ASSIGN;
-                                        }                   
                                     }
 
-"-="                                { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"-="                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return SUB_ASSIGN;
-                                        }                   
                                     }
 
-"*="                                { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"*="                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return MUL_ASSIGN;
-                                        }                   
                                     }
                                     
-"/="                                { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"/="                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return DIV_ASSIGN;
-                                        }                   
                                     }
-"%="					            { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"%="					            { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return MOD_ASSIGN;
-                                        }  
                                     }
 
-">>="					            { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+">>="					            { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return RIGHT_ASSIGN;
-                                        }  
                                     }
-"<<="					            { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"<<="					            { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return LEFT_ASSIGN;
-                                        }  
                                     }
 
-"&="					            { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"&="					            { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return AND_ASSIGN;
-                                        }  
                                     }
-"^="					            { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"^="					            { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return XOR_ASSIGN;
-                                        }  
                                     }
-"|="					            { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"|="					            { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return OR_ASSIGN;
-                                        }  
                                     }
 
-">="                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+">="                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return GE;
-                                        }                   
                                     }
-"&&"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"&&"                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return LOGIC_AND;
-                                        }                   
                                     }
-"||"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"||"                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return LOGIC_OR;
-                                        }                   
                                     }
-"!"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"!"                                 { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return NOT;
-                                        }                   
                                     }
   
-"++"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"++"                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return INC_OP;
-                                        }                   
                                     }  
-"--"                                 { if(!comment) {
-                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+"--"                                { 
+                                        trace("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return DEC_OP;
-                                        }                   
                                     }  
                                                                       
 
 
 
-{number}({letter}|{number}|_)+      { if(!comment) DEBUG_PRINT(RED "Error : Invalid Token %s at Line %d\n" RESET, yytext, yylineno); }
+{number}({letter}|{number}|_)+      { if(!comment) trace(RED "Error : Invalid Token %s at Line %d\n" RESET, yytext, yylineno); }
 
-.                                   { if(!comment) DEBUG_PRINT(RED "Error : Invalid Token %s at Line %d\n" RESET, yytext, yylineno); }
+.                                   { if(!comment) trace(RED "Error : Invalid Token %s at Line %d\n" RESET, yytext, yylineno); }
 
 %%
 
@@ -451,24 +397,43 @@ int yywrap(){
 /*
 int main(int argc, char** argv){
     if(argc < 2){
-        DEBUG_PRINT(RED "Pass input file as command line argument\n" RESET);
+        trace(RED "Pass input file as command line argument\n" RESET);
         exit(0);
     }
     initSymbolTable();
     yyin = fopen(argv[1], "r");
-    DEBUG_PRINT("\n\n-----------------------------------------------------------------\n");
-    DEBUG_PRINT(BLU "%-20s%20s%24s\n", "TOKEN VALUE", "TOKEN TYPE", "LINE NUMBER" RESET);
-    DEBUG_PRINT("-----------------------------------------------------------------\n");
+    trace("\n\n-----------------------------------------------------------------\n");
+    trace(BLU "%-20s%20s%24s\n", "TOKEN VALUE", "TOKEN TYPE", "LINE NUMBER" RESET);
+    trace("-----------------------------------------------------------------\n");
     yylex();
 
     if(comment)
-        DEBUG_PRINT(RED "Error : Error in parsing comments" RESET);
+        trace(RED "Error : Error in parsing comments" RESET);
 
-    DEBUG_PRINT(GRN "\n\nSYMBOL TABLE" RESET);
+    trace(GRN "\n\nSYMBOL TABLE" RESET);
     showSymbolTable();
-    DEBUG_PRINT(GRN "\n\nCONSTANT TABLE" RESET);
+    trace(GRN "\n\nCONSTANT TABLE" RESET);
     showConstantTable();
-    DEBUG_PRINT("\n\n");
+    trace("\n\n");
 }
 */
 
+
+void commentfunc(void)
+{
+    int c;
+
+    while ((c = input()) != 0)
+        if (c == '*')
+        {
+            while ((c = input()) == '*')
+                ;
+
+            if (c == '/')
+                return;
+
+            if (c == 0)
+                break;
+        }
+    yyerror("Unterminated comment");
+}

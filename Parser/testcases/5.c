@@ -1,9 +1,11 @@
 #include <stdio.h>
 
-int main() {
+/*
+This 
+is a
+comment
 
-    int a=2;
-    if(a==2){
-        a=1;
-    }
+*/
+int main() {
+    int d[];
 }
