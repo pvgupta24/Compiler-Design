@@ -14,7 +14,7 @@
 #include "lib/misc.h"
 
 // Trace function with variable number of arguement
-#define trace(fmt, args...) fprintf(stderr, fmt, ##args)
+#define trace(fmt, args...) //fprintf(stderr, fmt, ##args)
 void yyerror(const char * s);
 
 #define MAX_NODES 1000
@@ -31,76 +31,89 @@ char type[100];
 
 // %token INT FLOAT CHAR DOUBLE VOID RETURN
 %token SIGNED UNSIGNED LONG SHORT
-%token SWITCH BREAK CONTINUE CASE DEFAULT STRUCT RETURN
+%token SWITCH BREAK CONTINUE CASE DEFAULT RETURN
 %token FOR WHILE DO
 %token IF ELSE  
-%token <id> CONSTANT_INTEGER
-%token <id> CONSTANT_FLOAT
-%token <id> CONSTANT_STRING
-%token <id> CONSTANT_CHAR
+%token <char_ptr> CONSTANT_INTEGER
+%token <char_ptr> CONSTANT_FLOAT
+%token <char_ptr> CONSTANT_STRING
+%token <char_ptr> CONSTANT_CHAR
 
 %token INCLUDE
 
 %union {
-	char id[100];
+	char char_ptr[100];
 }
 
-%token <id> IDENTIFIER
-%token <id> INT
-%token <id> CHAR
-%token <id> FLOAT
-%token <id> DOUBLE
-%token <id> VOID
+%token <char_ptr> IDENTIFIER
+%token <char_ptr> INT
+%token <char_ptr> CHAR
+%token <char_ptr> FLOAT
+%token <char_ptr> DOUBLE
+%token <char_ptr> VOID
 
 
 %right '=' ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN XOR_ASSIGN OR_ASSIGN         
 %left LOGIC_AND LOGIC_OR NOT INC_OP DEC_OP
-%left LE GE EQ NE LT GT             // LE <= GE >= EQ == NE != LT < GT >
-%left '+' '-' '*' '/' '%' '^' '&' '.'
+%left LESSER_EQUAL GREATER_EQUAL DOUBLE_EQUAL NOT_EQUAL LESSER_THAN GREATER_THAN             
+%left '+' '-' '*' '/' '%' '^' '&' 
 
 %start Begin
 
 %% 
 Begin   
-	: Function_Definition
-	| Declaration
-	| Include
-	| Function_Definition Begin
-	| Declaration Begin
-	| Include Begin
+    : Include
+    | Include Begin
+    | Declaration
+    | Declaration Begin
+	| Function_Definition
+    | Function_Definition Begin
 	;
 
-Include_Statement
-	: '#' INCLUDE LT IDENTIFIER GT
-	| '#' INCLUDE LT IDENTIFIER '.' IDENTIFIER GT
-	;
+Declaration
+    :  Type Identifier_List ';'    
+    ;
 
-Include
-	: Include_Statement
-	;
+Identifier_List
+    : Array_Notation
+    | IDENTIFIER ',' Identifier_List        {symbol_table_insert(symbol_table,$1,type,yylineno);}
+    | '*' IDENTIFIER ',' Identifier_List    {
+                                                int len = strlen(type);
+                                                type[len] = '*';
+                                                type[len +1] = '\0';
+                                                symbol_table_insert(symbol_table,$2,type,yylineno);
+                                                type[len] = '\0';
+                                            }
+    | Array_Notation ',' Identifier_List 
+    | IDENTIFIER                            {symbol_table_insert(symbol_table,$1,type,yylineno);} 
+    | '*' IDENTIFIER                        {
+                                                int len = strlen(type);
+                                                type[len] = '*';
+                                                type[len +1] = '\0';
+                                                symbol_table_insert(symbol_table,$2,type,yylineno);
+                                                type[len] = '\0';
+                                            }
+    | Define_Assign ',' Identifier_List
+    | Define_Assign 
+    ;
 
 Function_Definition
-	: Type IDENTIFIER '(' Formal_Param_List ')' Compound_Statement       {                            
-                                            char funcType[100] = "Function: ";
-                                            strcat(funcType, type);
-                                            symbol_table_insert(symbol_table,$2, funcType, yylineno);
-                                        }
+	: Type IDENTIFIER '(' Formal_Param_List ')' Compound_Statement      {                            
+                                                                            char funcType[100] = "Function: ";
+                                                                            strcat(funcType, type);
+                                                                            symbol_table_insert(symbol_table,$2, funcType, yylineno);
+                                                                        }
 	;
 
 Formal_Param_List
-	: Type IDENTIFIER                                  {symbol_table_insert(symbol_table,$2,type,yylineno);trace("FLIST Call 1\n");}
-	| Type '*' IDENTIFIER                              {symbol_table_insert(symbol_table,$3,type,yylineno);trace("FLIST Call 2\n");}
-	| Type Array_Notation                              {trace("FLIST Call 3\n");}
-	| Type IDENTIFIER ',' Formal_Param_List            {symbol_table_insert(symbol_table,$2,type,yylineno);trace("FLIST Call 4\n");}
-	| Type '*' IDENTIFIER ',' Formal_Param_List        {symbol_table_insert(symbol_table,$3,type,yylineno);trace("FLIST Call 5\n");}
-	| Type Array_Notation ',' Formal_Param_List        {trace("FLIST Call 6\n");}
+	: Type IDENTIFIER                                  {symbol_table_insert(symbol_table,$2,type,yylineno);trace("Formal_Param_List Rule 1\n");}
+	| Type '*' IDENTIFIER                              {symbol_table_insert(symbol_table,$3,type,yylineno);trace("Formal_Param_List Rule 2\n");}
+	| Type Array_Notation                              {trace("Formal_Param_List Rule 3\n");}
+	| Type IDENTIFIER ',' Formal_Param_List            {symbol_table_insert(symbol_table,$2,type,yylineno);trace("Formal_Param_List Rule 4\n");}
+	| Type '*' IDENTIFIER ',' Formal_Param_List        {symbol_table_insert(symbol_table,$3,type,yylineno);trace("Formal_Param_List Rule 5\n");}
+	| Type Array_Notation ',' Formal_Param_List        {trace("Formal_Param_List Rule 6\n");}
 	|
 	;
-
-
-Declaration
-    :  Type Identifier_List ';'    {;}
-    ;
 
 Type
     : INT                       {strcpy(type, $1);}
@@ -142,31 +155,10 @@ Array_Notation
                                     }
     ;
 
-Identifier_List
-    : Array_Notation
-    | IDENTIFIER ',' Identifier_List        {symbol_table_insert(symbol_table,$1,type,yylineno);}
-    | '*' IDENTIFIER ',' Identifier_List    {
-                                                int len = strlen(type);
-                                                type[len] = '*';
-                                                type[len +1] = '\0';
-                                                symbol_table_insert(symbol_table,$2,type,yylineno);
-                                                type[len] = '\0';
-                                            }
-    | Array_Notation ',' Identifier_List 
-    | IDENTIFIER                            {symbol_table_insert(symbol_table,$1,type,yylineno);} 
-    | '*' IDENTIFIER                        {
-                                                int len = strlen(type);
-                                                type[len] = '*';
-                                                type[len +1] = '\0';
-                                                symbol_table_insert(symbol_table,$2,type,yylineno);
-                                                type[len] = '\0';
-                                            }
-    | Define_Assign ',' Identifier_List
-    | Define_Assign 
-    ;
+
 
 Define_Assign
-    : IDENTIFIER Assignment_Operator Expression          {symbol_table_insert(symbol_table,$1,type,yylineno);trace("Assignment Rule 1 called\n");}  
+    : IDENTIFIER Assignment_Operator Expression          {symbol_table_insert(symbol_table,$1,type,yylineno);trace("Define_Assign Rule 1\n");}  
     | '*' IDENTIFIER Assignment_Operator Expression      {symbol_table_insert(symbol_table,$2,type,yylineno);}
     | Array_Notation Assignment_Operator Expression                   
     ;
@@ -178,7 +170,7 @@ Param_List
     ;
 
 Assignment
-    : IDENTIFIER Assignment_Operator Expression           {trace("Assignment Rule 1 called\n");}
+    : IDENTIFIER Assignment_Operator Expression           {trace("Assignment Rule 1\n");}
     | '*' IDENTIFIER Assignment_Operator Expression         
     | Array_Notation Assignment_Operator Expression
     | Primary
@@ -200,38 +192,37 @@ Assignment_Operator
 
 
 Expression
-    : Logical_Expr
+    : Logical_Expression
     ;
 
-
-Logical_Expr
-    : Relational_Expr
-    | Logical_Expr LOGIC_AND Relational_Expr
-    | Logical_Expr LOGIC_OR Relational_Expr
-    | NOT Relational_Expr 
+Logical_Expression
+    : Relational_Expression
+    | Logical_Expression LOGIC_AND Relational_Expression
+    | Logical_Expression LOGIC_OR Relational_Expression
+    | NOT Relational_Expression 
     ;
 
-Relational_Expr
-    : Additive_Expr
-    | Relational_Expr GT Additive_Expr
-    | Relational_Expr LT Additive_Expr
-    | Relational_Expr GE Additive_Expr
-    | Relational_Expr LE Additive_Expr
-    | Relational_Expr EQ Additive_Expr
-    | Relational_Expr NE Additive_Expr
+Relational_Expression
+    : Additive_Expression
+    | Relational_Expression GREATER_THAN Additive_Expression
+    | Relational_Expression LESSER_THAN Additive_Expression
+    | Relational_Expression GREATER_EQUAL Additive_Expression
+    | Relational_Expression LESSER_EQUAL Additive_Expression
+    | Relational_Expression DOUBLE_EQUAL Additive_Expression
+    | Relational_Expression NOT_EQUAL Additive_Expression
     ;
 
-Additive_Expr
-    : Multiplicative_Expr
-    | Additive_Expr '+' Multiplicative_Expr
-    | Additive_Expr '-' Multiplicative_Expr
+Additive_Expression
+    : Multiplicative_Expression
+    | Additive_Expression '+' Multiplicative_Expression
+    | Additive_Expression '-' Multiplicative_Expression
     ;
 
-Multiplicative_Expr
+Multiplicative_Expression
     : Primary
-    | Multiplicative_Expr '*' Primary
-    | Multiplicative_Expr '/' Primary
-    | Multiplicative_Expr '%' Primary
+    | Multiplicative_Expression '*' Primary
+    | Multiplicative_Expression '/' Primary
+    | Multiplicative_Expression '%' Primary
     ;
 
 Primary
@@ -276,7 +267,7 @@ Statement
     ; 
 
 Return_Statement
-    : RETURN Expression ';'   {trace("Return Statement Call\n");}
+    : RETURN Expression ';'   {trace("Return_Statement Call\n");}
     ;
 
 While_Statement
@@ -308,6 +299,16 @@ Else_Statement
 Function_Call
     : IDENTIFIER '(' Param_List ')'     {symbol_table_insert(symbol_table, $1, "Function", yylineno);trace("Function Call\n");} 
     ;
+
+Include_Statement
+	: '#' INCLUDE LESSER_THAN IDENTIFIER GREATER_THAN
+	| '#' INCLUDE LESSER_THAN IDENTIFIER '.' IDENTIFIER GREATER_THAN
+	;
+
+Include
+	: Include_Statement
+	;
+
 
 %%
 
