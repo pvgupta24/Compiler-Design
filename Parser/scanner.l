@@ -349,27 +349,60 @@ return                             { if(!comment){
 
 "+="                                { if(!comment) {
                                         DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
-                                        return PAS;
+                                        return ADD_ASSIGN;
                                         }                   
                                     }
 
 "-="                                { if(!comment) {
                                         DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
-                                        return SAS;
+                                        return SUB_ASSIGN;
                                         }                   
                                     }
 
 "*="                                { if(!comment) {
                                         DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
-                                        return MAS;
+                                        return MUL_ASSIGN;
                                         }                   
                                     }
                                     
 "/="                                { if(!comment) {
                                         DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
-                                        return DAS;
+                                        return DIV_ASSIGN;
                                         }                   
                                     }
+"%="					            { if(!comment) {
+                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+                                        return MOD_ASSIGN;
+                                        }  
+                                    }
+
+">>="					            { if(!comment) {
+                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+                                        return RIGHT_ASSIGN;
+                                        }  
+                                    }
+"<<="					            { if(!comment) {
+                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+                                        return LEFT_ASSIGN;
+                                        }  
+                                    }
+
+"&="					            { if(!comment) {
+                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+                                        return AND_ASSIGN;
+                                        }  
+                                    }
+"^="					            { if(!comment) {
+                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+                                        return XOR_ASSIGN;
+                                        }  
+                                    }
+"|="					            { if(!comment) {
+                                        DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
+                                        return OR_ASSIGN;
+                                        }  
+                                    }
+
 ">="                                 { if(!comment) {
                                         DEBUG_PRINT("%-20s%20s%20d\n", "OPERATOR", yytext, yylineno); 
                                         return GE;

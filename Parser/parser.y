@@ -56,7 +56,7 @@ char type[100];
 %token <id> VOID
 
 
-%right '=' PAS MAS DAS SAS           
+%right '=' ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN XOR_ASSIGN OR_ASSIGN         
 %left LOGIC_AND LOGIC_OR NOT INC_OP DEC_OP
 %left LE GE EQ NE LT GT             // LE <= GE >= EQ == NE != LT < GT >
 %left '+' '-' '*' '/' '%' '^' '&' '.'
@@ -154,10 +154,18 @@ Assignment
 
 Assignment_Operator
 	: '='
-	| PAS
-	| SAS
-	| MAS
-	| DAS
+    | ADD_ASSIGN
+    | SUB_ASSIGN
+	| MUL_ASSIGN
+	| DIV_ASSIGN
+	| MOD_ASSIGN
+	| LEFT_ASSIGN
+	| RIGHT_ASSIGN
+	| AND_ASSIGN
+	| XOR_ASSIGN
+	| OR_ASSIGN
+	;
+
 	;
 
 Expression
