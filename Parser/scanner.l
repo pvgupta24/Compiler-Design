@@ -1,23 +1,20 @@
 /*
-* http://www.quut.com/c/ANSI-C-grammar-l-2011.html#comment
+* Scanner for C language
+*
+* Ref: http://www.quut.com/c/ANSI-C-grammar-l-2011.html
+*
 * @author Shashank P, Praveen Gupta, Ashwin Joisa
 */
 
 %{
-
-#define trace(fmt, args...) //fprintf(stderr, fmt, ##args)
-
 #include "y.tab.h"
 #include "lib/misc.h"
+
 %}
 
-keyword         char|int|float|short|long|unsigned|signed|main|while|for|break|case|if|else|continue|default|do|return|void|struct|switch
 number          [0-9]
 letter          [a-zA-Z]
-
-
 single_operators    [+*/%^&.=-]
-function        (_|{letter})({letter}|{number}|_)*"()"
 
 %option yylineno
 %option noyywrap
@@ -27,303 +24,295 @@ function        (_|{letter})({letter}|{number}|_)*"()"
 \/\/(.)*[\n]                        {
                                     }
 
-"/*"                                { comment(); }
+"/*"                                { multiline_comment(); }
 
 #                                   {  
-                                        trace("%-20s%20s%20d\n","#", yytext, yylineno);
+                                        trace("#");
                                         return *yytext;  
                                     }
 
 include                             {  
-                                        trace("%-20s%20s%20d\n","INCLUDE", yytext, yylineno);
+                                        trace("INCLUDE");
                                         return INCLUDE;  
-                                        
                                     }
 
 [\n]                                {
                                     }
 
 [{]                                 { 
-                                        trace("%-20s%20s%20d\n","{", yytext, yylineno);
+                                        trace("{");
                                         return *yytext;
                                     }
 [}]                                 { 
-                                        trace("%-20s%20s%20d\n","}", yytext, yylineno);
+                                        trace("}");
                                         return *yytext;
                                     }
 
 \"[^"\n]*["\n]                      { 
                                         if(yytext[yyleng-1]!='"'){
-                                            trace(FORE_RED "Error : Quote unbalanced at line number %d\n" RESET,yylineno);
+                                            yyerror("Unclosed String\n");
                                         }
-                                        trace("%-20s%20s%20d\n", "CONSTANT_STRING", yytext, yylineno);
+                                        trace("CONSTANT_STRING");
                                         strcpy(yylval.char_ptr, yytext);
                                         return CONSTANT_STRING;
                                     }
 
 int                                 { 
-                                        trace("%-20s%20s%20d\n", "INT", yytext, yylineno);
+                                        trace("INT");
 										strcpy(yylval.char_ptr, yytext);
                                         return INT;
                                     }
 
 float                               { 
-                                        trace("%-20s%20s%20d\n", "FLOAT", yytext, yylineno);
+                                        trace("FLOAT");
 										strcpy(yylval.char_ptr, yytext);
                                         return FLOAT;
                                     }
 char                                { 
-                                        trace("%-20s%20s%20d\n", "CHAR", yytext, yylineno);
+                                        trace("CHAR");
 										strcpy(yylval.char_ptr, yytext);
                                         return CHAR;
                                     }
 double                              { 
-                                        trace("%-20s%20s%20d\n", "DOUBLE", yytext, yylineno);
+                                        trace("DOUBLE");
 										strcpy(yylval.char_ptr, yytext);
                                         return DOUBLE;
                                     }
 void                                { 
-                                        trace("%-20s%20s%20d\n", "VOID", yytext, yylineno);
+                                        trace("VOID");
 										strcpy(yylval.char_ptr, yytext);
                                         return VOID;
                                     }
 signed                              { 
-                                        trace("%-20s%20s%20d\n", "SIGNED", yytext, yylineno);
+                                        trace("SIGNED");
                                         return SIGNED;
                                     }
 unsigned                            { 
-                                        trace("%-20s%20s%20d\n", "UNSIGNED", yytext, yylineno);
+                                        trace("UNSIGNED");
                                         return UNSIGNED;
                                     }
 long                                { 
-                                        trace("%-20s%20s%20d\n", "LONG", yytext, yylineno);
+                                        trace("LONG");
                                         return LONG;
                                     }
 short                               { 
-                                        trace("%-20s%20s%20d\n", "SHORT", yytext, yylineno);
+                                        trace("SHORT");
                                         return SHORT;
                                       
                                     }
 switch                              { 
-                                        trace("%-20s%20s%20d\n", "SWITCH", yytext, yylineno);
+                                        trace("SWITCH");
                                         return SWITCH;
                                     }
 break                               { 
-                                        trace("%-20s%20s%20d\n", "BREAK", yytext, yylineno);
+                                        trace("BREAK");
                                         return BREAK;
                                     }
 continue                            { 
-                                        trace("%-20s%20s%20d\n", "CONTINUE", yytext, yylineno);
+                                        trace("CONTINUE");
                                         return CONTINUE;
                                     }
 case                                { 
-                                        trace("%-20s%20s%20d\n", "CASE", yytext, yylineno);
+                                        trace("CASE");
                                         return CASE;
                                     }
 default                             { 
-                                        trace("%-20s%20s%20d\n", "DEFAULT", yytext, yylineno);
+                                        trace("DEFAULT");
                                         return DEFAULT;
                                     }
 for                                 { 
-                                        trace("%-20s%20s%20d\n", "FOR", yytext, yylineno);
+                                        trace("FOR");
                                         return FOR;
                                     }
 while                               { 
-                                        trace("%-20s%20s%20d\n", "WHILE", yytext, yylineno);
+                                        trace("WHILE");
                                         return WHILE;
                                     }
 do                                  { 
-                                        trace("%-20s%20s%20d\n", "DO", yytext, yylineno);
+                                        trace("DO");
                                         return DO;
                                     }
 if                                  { 
-                                        trace("%-20s%20s%20d\n", "IF", yytext, yylineno);
+                                        trace("IF");
                                         return IF;
                                       
                                     }
 else                                { 
-                                        trace("%-20s%20s%20d\n", "ELSE", yytext, yylineno);
+                                        trace("ELSE");
                                         return ELSE;
                                     }
 
 return                              { 
-                                        trace("%-20s%20s%20d\n", "RETURN", yytext, yylineno);
+                                        trace("RETURN");
                                         return RETURN;
                                     }
                                                                                                             
 [(]                                 { 
-                                        trace("%-20s%20s%20d\n", "(", yytext, yylineno);
+                                        trace("(");
                                         return *yytext;
                                     }
 [)]                                 { 
-                                        trace("%-20s%20s%20d\n", ")", yytext, yylineno);
+                                        trace(")");
                                         return *yytext;
                                     }
 [\[]                                { 
-                                        trace("%-20s%20s%20d\n", "[", yytext, yylineno);
+                                        trace("[");
                                         return *yytext;
                                     }
 [\]]                                { 
-                                        trace("%-20s%20s%20d\n", "]", yytext, yylineno);
+                                        trace("]");
                                         return *yytext;
                                     }
 [,]                                 { 
-                                        trace("%-20s%20s%20d\n", ",", yytext, yylineno);
+                                        trace(",");
                                         return *yytext;
                                     } 
 
 [\t ]                               {}
 
 [;]                                 { 
-                                        trace("%-20s%20s%20d\n", ";", yytext, yylineno);
+                                        trace(";");
                                         return *yytext;
                                     }
 
 \'.\'                               { 
-                                        trace("%-20s%20s%20d\n", "CONSTANT_CHAR", yytext, yylineno); 
+                                        trace("CONSTANT_CHAR"); 
                                         strcpy(yylval.char_ptr, yytext);
                                         return CONSTANT_CHAR;
                                     }
 
 {number}+(\.{number}+)?e{number}+   { 
-                                        trace("%-20s%20s%20d\n", "CONSTANT_FLOAT", yytext, yylineno); 
+                                        trace("CONSTANT_FLOAT"); 
                                         strcpy(yylval.char_ptr, yytext);
                                         return CONSTANT_FLOAT;
                                     } 
 
 {number}+\.{number}+                { 
-                                        trace("%-20s%20s%20d\n", "CONSTANT_FLOAT", yytext, yylineno); 
+                                        trace("CONSTANT_FLOAT"); 
                                         strcpy(yylval.char_ptr, yytext);
                                         return CONSTANT_FLOAT;
                                     }                                             
 
 {number}+                           { 
-                                        trace("%-20s%20s%20d\n", "CONSTANT_INTEGER", yytext, yylineno); 
+                                        trace("CONSTANT_INTEGER"); 
                                         strcpy(yylval.char_ptr, yytext);
                                         return CONSTANT_INTEGER;
                                     }    
 
 (_|{letter})({letter}|{number}|_)*  { 
-                                        trace("%-20s%20s%20d\n", "IDENTIFIER", yytext, yylineno);
+                                        trace("IDENTIFIER");
                                         strcpy(yylval.char_ptr, yytext);
                                         return IDENTIFIER;
                                     }
 
-{single_operators}        { 
-                                        trace("%-20s%20s%20d\n", "UNARY OPERATOR", yytext, yylineno); 
+{single_operators}                  { 
+                                        trace("SINGLE OPERATOR"); 
                                         return *yytext;
                                     }
-          
+
 "=="                                { 
-                                        trace("%-20s%20s%20d\n", "==", yytext, yylineno); 
+                                        trace("=="); 
                                         return DOUBLE_EQUAL;
                                     }
 "!="                                { 
-                                        trace("%-20s%20s%20d\n", "!=", yytext, yylineno); 
+                                        trace("!="); 
                                         return NOT_EQUAL;
                                     }
 "<"                                 { 
-                                        trace("%-20s%20s%20d\n", "<", yytext, yylineno); 
+                                        trace("<"); 
                                         return LESSER_THAN;
                                     }
 ">"                                 { 
-                                        trace("%-20s%20s%20d\n", ">", yytext, yylineno); 
+                                        trace(">"); 
                                         return GREATER_THAN;
                                     }
 "<="                                 { 
-                                        trace("%-20s%20s%20d\n", "<=", yytext, yylineno); 
+                                        trace("<="); 
                                         return LESSER_EQUAL;
                                     }
 
 "+="                                { 
-                                        trace("%-20s%20s%20d\n", "+=", yytext, yylineno); 
+                                        trace("+="); 
                                         return ADD_ASSIGN;
                                     }
 
 "-="                                { 
-                                        trace("%-20s%20s%20d\n", "-=", yytext, yylineno); 
+                                        trace("-="); 
                                         return SUB_ASSIGN;
                                     }
 
 "*="                                { 
-                                        trace("%-20s%20s%20d\n", "*=", yytext, yylineno); 
+                                        trace("*="); 
                                         return MUL_ASSIGN;
                                     }
                                     
 "/="                                { 
-                                        trace("%-20s%20s%20d\n", "/=", yytext, yylineno); 
+                                        trace("/="); 
                                         return DIV_ASSIGN;
                                     }
 "%="					            { 
-                                        trace("%-20s%20s%20d\n", "%=", yytext, yylineno); 
+                                        trace("%="); 
                                         return MOD_ASSIGN;
                                     }
 
 ">>="					            { 
-                                        trace("%-20s%20s%20d\n", ">>=", yytext, yylineno); 
+                                        trace(">>="); 
                                         return RIGHT_ASSIGN;
                                     }
 "<<="					            { 
-                                        trace("%-20s%20s%20d\n", "<<=", yytext, yylineno); 
+                                        trace("<<="); 
                                         return LEFT_ASSIGN;
                                     }
 
 "&="					            { 
-                                        trace("%-20s%20s%20d\n", "&=", yytext, yylineno); 
+                                        trace("&="); 
                                         return AND_ASSIGN;
                                     }
 "^="					            { 
-                                        trace("%-20s%20s%20d\n", "^=", yytext, yylineno); 
+                                        trace("^="); 
                                         return XOR_ASSIGN;
                                     }
 "|="					            { 
-                                        trace("%-20s%20s%20d\n", "|=", yytext, yylineno); 
+                                        trace("|="); 
                                         return OR_ASSIGN;
                                     }
 
 ">="                                { 
-                                        trace("%-20s%20s%20d\n", ">=", yytext, yylineno); 
+                                        trace(">="); 
                                         return GREATER_EQUAL;
                                     }
 "&&"                                { 
-                                        trace("%-20s%20s%20d\n", "&&", yytext, yylineno); 
+                                        trace("&&"); 
                                         return LOGIC_AND;
                                     }
 "||"                                { 
-                                        trace("%-20s%20s%20d\n", "||", yytext, yylineno); 
+                                        trace("||"); 
                                         return LOGIC_OR;
                                     }
 "!"                                 { 
-                                        trace("%-20s%20s%20d\n", "!", yytext, yylineno); 
+                                        trace("!"); 
                                         return NOT;
                                     }
   
 "++"                                { 
-                                        trace("%-20s%20s%20d\n", "+=", yytext, yylineno); 
-                                        return INC_OP;
+                                        trace("+="); 
+                                        return INCREMENT_OPERATOR;
                                     }  
 "--"                                { 
-                                        trace("%-20s%20s%20d\n", "--", yytext, yylineno); 
-                                        return DEC_OP;
+                                        trace("--"); 
+                                        return DECREMENT_OPERATOR;
                                     }  
                                                                       
 
-{number}({letter}|{number}|_)+      { trace(FORE_RED "Error : Invalid Token %s at Line %d\n" RESET, yytext, yylineno); }
-
-.                                   { trace(FORE_RED "Error : Invalid Token %s at Line %d\n" RESET, yytext, yylineno); }
+(({number}({letter}|{number}|_)+)|.)      { yyerror("Invalid Token"); }
 
 %%
 
-// void trace(char *s){
-//     // fprintf(stderr, fmt, ##args);
-// }
-
-void comment()
+void multiline_comment()
 {
     int c;
     while ((c = input()) != 0){
-        if (c == '*')
-        {
+        if (c == '*'){
             while ((c = input()) == '*')
                 ;
 
@@ -334,5 +323,6 @@ void comment()
                 break;
         }
     }
-    yyerror("Unterminated comment");
+
+    yyerror("Unterminated Multiline Comment");
 }

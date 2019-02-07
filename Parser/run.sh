@@ -9,5 +9,6 @@ if [ $1 ]; then
     printf "Parsing $1 ↓\n"
     ./parser.out < $1
 else
+    echo "Enter C code to parse (<Ctrl+D> to stop):"
     ./parser.out    
 fi
