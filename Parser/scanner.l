@@ -7,16 +7,10 @@
 
 #define trace(fmt, args...) //fprintf(stderr, fmt, ##args)
 
-#define RED   "\x1B[31m"
-#define RESET "\x1B[0m"
-#define GRN   "\x1B[32m"
-#define BLU   "\x1B[34m"
-
 #include "y.tab.h"
+#include "lib/misc.h"
 
 int scope = 0;
-// int yylineno = 1;
-int comment = 0;
 %}
 
 keyword         char|int|float|short|long|unsigned|signed|main|while|for|break|case|if|else|continue|default|do|return|void|struct|switch
@@ -30,24 +24,25 @@ function        (_|{letter})({letter}|{number}|_)*"()"
 
 %%
 \/\/(.)*[\n]                        {
-    //yylineno++;
-    }
+                                    //yylineno++;
+                                    }
 
-"/*"                                { commentfunc(); }
+"/*"                                { comment(); }
 
 #                                   {  
-                                            trace("%-20s%20s%20d\n","PREPROCESSOR", yytext, yylineno);
-                                            return *yytext;  
+                                        trace("%-20s%20s%20d\n","PREPROCESSOR", yytext, yylineno);
+                                        return *yytext;  
                                         
                                     }
 
 include                             {  
-                                            trace("%-20s%20s%20d\n","PREPROCESSOR", yytext, yylineno);
-                                            return INCLUDE;  
+                                        trace("%-20s%20s%20d\n","PREPROCESSOR", yytext, yylineno);
+                                        return INCLUDE;  
                                         
                                     }
 
-[\n]                                { //yylineno++; 
+[\n]                                {
+                                        //yylineno++; 
                                     }
 
 [{]                                 { 
@@ -65,11 +60,11 @@ include                             {
 
 \"[^"\n]*["\n]                      { 
                                         if(yytext[yyleng-1]!='"'){
-                                            trace(RED "Error : Quote unbalanced at line number %d\n" RESET,yylineno);
+                                            trace(FORE_RED "Error : Quote unbalanced at line number %d\n" RESET,yylineno);
                                             //yylineno++;
                                         }
                                         trace("%-20s%20s%20d\n", "CONSTANT_STRING", yytext, yylineno);
-                                        // strcpy(yylval, yytext);
+                                        strcpy(yylval.id, yytext);
                                         return CONSTANT_STRING;
                                       
                                     }
@@ -384,9 +379,9 @@ return                              {
 
 
 
-{number}({letter}|{number}|_)+      { if(!comment) trace(RED "Error : Invalid Token %s at Line %d\n" RESET, yytext, yylineno); }
+{number}({letter}|{number}|_)+      { trace(FORE_RED "Error : Invalid Token %s at Line %d\n" RESET, yytext, yylineno); }
 
-.                                   { if(!comment) trace(RED "Error : Invalid Token %s at Line %d\n" RESET, yytext, yylineno); }
+.                                   { trace(FORE_RED "Error : Invalid Token %s at Line %d\n" RESET, yytext, yylineno); }
 
 %%
 
@@ -394,32 +389,9 @@ return                              {
 int yywrap(){
   return 1;
 }
-/*
-int main(int argc, char** argv){
-    if(argc < 2){
-        trace(RED "Pass input file as command line argument\n" RESET);
-        exit(0);
-    }
-    initSymbolTable();
-    yyin = fopen(argv[1], "r");
-    trace("\n\n-----------------------------------------------------------------\n");
-    trace(BLU "%-20s%20s%24s\n", "TOKEN VALUE", "TOKEN TYPE", "LINE NUMBER" RESET);
-    trace("-----------------------------------------------------------------\n");
-    yylex();
-
-    if(comment)
-        trace(RED "Error : Error in parsing comments" RESET);
-
-    trace(GRN "\n\nSYMBOL TABLE" RESET);
-    showSymbolTable();
-    trace(GRN "\n\nCONSTANT TABLE" RESET);
-    showConstantTable();
-    trace("\n\n");
-}
-*/
 
 
-void commentfunc(void)
+void comment()
 {
     int c;
 

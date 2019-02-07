@@ -1,4 +1,3 @@
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -22,9 +21,12 @@ symbol_node_t *create_symbol_node(const char* symbol, const char *type, const in
 
    symbol_node_t *node = malloc(sizeof(symbol_node_t));
    node->symbol = malloc(sizeof(char) * (strlen(symbol) +1));
+   node->type = malloc(sizeof(char) * (strlen(type) +1));
+
    strcpy(node->symbol, symbol);
+   strcpy(node->type, type);
    // node->symbol = (char*)symbol;
-   node->type = (char*)type;
+   // node->type = (char*)type;
    node->line_number = line_number;
    node->next = NULL;
 
@@ -77,12 +79,12 @@ void symbol_table_print(symbol_node_t **symbol_table, const char *table_name){
    printf(FORE_CYN "%s\t\n" RESET, table_name);
    printf(FORE_YEL DASHES RESET);
 
-   printf(FORE_GRN "|\t%-20s" "|\t%-20s" "|\t%-20s|" "\n" RESET, "Symbol", "Type", "Line Number");
+   printf(FORE_GRN "|\t%-20.20s" "|\t%-20.20s" "|\t%-20.20s|" "\n" RESET, "Symbol", "Type", "Line Number");
    printf(FORE_YEL DASHES RESET);
 
    for(int i=0; i< MAX_SYMBOL_TABLE_SIZE; ++i){
       for(symbol_node_t *curr = symbol_table[i]; curr != NULL; curr = curr->next){
-         printf(FORE_GRN "|\t%-20s" "|\t%-20s" ATTR_BOLD "|\t%-20d|" "\n" RESET, curr->symbol, curr->type, curr->line_number);
+         printf(FORE_GRN "|\t%-20.20s" "|\t%-20.20s" ATTR_BOLD "|\t%-20d|" "\n" RESET, curr->symbol, curr->type, curr->line_number);
       }
    }
 

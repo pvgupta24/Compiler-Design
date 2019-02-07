@@ -3,6 +3,8 @@
 int main()
 {
     int c, first, last, middle, n, search, array[100];
+    char aa, *xyz, bb;
+    float def;
 
     printf("Enter number of elements\n");
     scanf("%d", &n);

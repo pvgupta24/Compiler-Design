@@ -1,4 +1,6 @@
 /*
+* Parser for C language
+*
 * http://www.quut.com/c/ANSI-C-grammar-y.html
 * @author Shashank P, Praveen Gupta, Ashwin Joisa
 */
@@ -11,7 +13,7 @@
 #include "lib/misc.h"
 
 // Trace function with variable number of arguement
-#define trace(fmt, args...) //fprintf(stderr, fmt, ##args)
+#define trace(fmt, args...) fprintf(stderr, fmt, ##args)
 void yyerror(const char * s);
 
 #define MAX_NODES 1000
@@ -19,9 +21,7 @@ void yyerror(const char * s);
 symbol_node_t *symbol_table[MAX_NODES];
 symbol_node_t *constant_table[MAX_NODES];
 
-extern FILE *yyin, *yyout;
 extern char *yytext;
-// extern int yylineno;
 extern int yylineno;
 
 char type[100];
@@ -43,6 +43,7 @@ char type[100];
 %union {
 	char id[100];
 }
+
 %token <id> IDENTIFIER
 %token <id> INT
 %token <id> CHAR
@@ -78,7 +79,11 @@ Include
 	;
 
 Function_Definition
-	: Type IDENTIFIER '(' Formal_Param_List ')' Compound_Statement       {symbol_table_insert(symbol_table,$2,"function",yylineno);}
+	: Type IDENTIFIER '(' Formal_Param_List ')' Compound_Statement       {                            
+                                            char funcType[100] = "Function: ";
+                                            strcat(funcType, type);
+                                            symbol_table_insert(symbol_table,$2, funcType, yylineno);
+                                        }
 	;
 
 Formal_Param_List
@@ -113,21 +118,48 @@ Modifiers
     ;
 
 Array_Notation
-    : IDENTIFIER '[' ']'            {    
-                                        symbol_table_insert(symbol_table, $1, strcat(type, " : array"), yylineno);
+    : IDENTIFIER '[' ']'            {   
+                                        char arrayType[100] = "Array: ";
+                                        strcat(arrayType, type);
+                                        symbol_table_insert(symbol_table, $1, arrayType, yylineno);
                                     }
-    | IDENTIFIER '[' Expression ']' {
-                                        symbol_table_insert(symbol_table,$1, strcat(type, " : array"),yylineno);
+    | IDENTIFIER '[' Expression ']' {   
+                                        char arrayType[100] = "Array: ";strcat(arrayType, type);
+                                        symbol_table_insert(symbol_table,$1, arrayType,yylineno);
+                                    }
+    | '*' IDENTIFIER '[' Expression ']' {   
+                                        int len = strlen(type);
+                                        type[len] = '*';
+                                        type[len +1] = '\0';                                
+                                        char arrayType[100] = "Array: ";strcat(arrayType, type);
+                                        symbol_table_insert(symbol_table,$2, arrayType,yylineno);
+                                        type[len] = '\0';
+                                    }
+    | '&' IDENTIFIER '[' Expression ']' {
+                                        char arrayType[100] = "Array: ";strcat(arrayType, type);
+                                        symbol_table_insert(symbol_table,$2, arrayType,yylineno);
                                     }
     ;
 
 Identifier_List
     : Array_Notation
     | IDENTIFIER ',' Identifier_List        {symbol_table_insert(symbol_table,$1,type,yylineno);}
-    | '*' IDENTIFIER ',' Identifier_List    {symbol_table_insert(symbol_table,$2,type,yylineno);}
+    | '*' IDENTIFIER ',' Identifier_List    {
+                                                int len = strlen(type);
+                                                type[len] = '*';
+                                                type[len +1] = '\0';
+                                                symbol_table_insert(symbol_table,$2,type,yylineno);
+                                                type[len] = '\0';
+                                            }
     | Array_Notation ',' Identifier_List 
     | IDENTIFIER                            {symbol_table_insert(symbol_table,$1,type,yylineno);} 
-    | '*' IDENTIFIER                        {symbol_table_insert(symbol_table,$2,type,yylineno);}
+    | '*' IDENTIFIER                        {
+                                                int len = strlen(type);
+                                                type[len] = '*';
+                                                type[len +1] = '\0';
+                                                symbol_table_insert(symbol_table,$2,type,yylineno);
+                                                type[len] = '\0';
+                                            }
     | Define_Assign ',' Identifier_List
     | Define_Assign 
     ;
@@ -203,10 +235,10 @@ Multiplicative_Expr
 
 Primary
     : '(' Expression ')'
-    | CONSTANT_INTEGER     {symbol_table_insert(constant_table, $1, type, yylineno); trace("CONSTANT_INTEGER\n");}
-    | CONSTANT_FLOAT       {symbol_table_insert(constant_table, $1, type, yylineno); trace("CONSTANT_FLOAT\n");}
-    | CONSTANT_CHAR        {symbol_table_insert(constant_table, $1, type, yylineno); trace("CONSTANT_CHAR\n");}
-    | CONSTANT_STRING      {symbol_table_insert(constant_table, $1, type, yylineno); trace("CONSTANT_STRING\n");}
+    | CONSTANT_INTEGER     {symbol_table_insert(constant_table, $1, "int", yylineno); trace("CONSTANT_INTEGER\n");}
+    | CONSTANT_FLOAT       {symbol_table_insert(constant_table, $1, "float", yylineno); trace("CONSTANT_FLOAT\n");}
+    | CONSTANT_CHAR        {symbol_table_insert(constant_table, $1, "char", yylineno); trace("CONSTANT_CHAR\n");}
+    | CONSTANT_STRING      {symbol_table_insert(constant_table, $1, "string", yylineno); trace("CONSTANT_STRING\n");}
     | IDENTIFIER           {trace("Primary Identifier\n");}
     | '*' IDENTIFIER       {trace("Pointer Identifier\n");}
     | '&' IDENTIFIER       {trace("Address of Identifier\n");}
@@ -273,7 +305,7 @@ Else_Statement
     ;
 
 Function_Call
-    : IDENTIFIER '(' Param_List ')'           {trace("Function Call\n");} 
+    : IDENTIFIER '(' Param_List ')'     {symbol_table_insert(symbol_table, $1, "Function", yylineno);trace("Function Call\n");} 
     ;
 
 %%
@@ -281,10 +313,8 @@ Function_Call
 
 // #include<ctype.h>
 
-int main(int argc, char *argv[])
+int main()
 {
-	yyin = fopen(argv[1], "r");
-    
     symbol_table_initialize(symbol_table);
     symbol_table_initialize(constant_table);
 
@@ -292,8 +322,6 @@ int main(int argc, char *argv[])
         printf("\nParsing complete\n");
     else
         printf(FORE_RED "\nParsing failed\n" RESET);
-
-    fclose(yyin);
 
     symbol_table_print(symbol_table, "Symbol Table");
     symbol_table_print(constant_table, "Constant Table");
