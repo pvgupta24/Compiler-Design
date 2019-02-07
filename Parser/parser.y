@@ -2,6 +2,7 @@
 * Parser for C language
 *
 * http://www.quut.com/c/ANSI-C-grammar-y.html
+*
 * @author Shashank P, Praveen Gupta, Ashwin Joisa
 */
 
@@ -310,8 +311,6 @@ Function_Call
 
 %%
 
-
-// #include<ctype.h>
 
 int main()
 {
