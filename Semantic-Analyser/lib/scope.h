@@ -22,7 +22,7 @@ scope_node_t *add_child_scope(scope_node_t *curr_scope);
 
 scope_node_t *goto_parent_scope(scope_node_t *curr_scope);
 
-bool scope_check(symbol_node_t **symbol_table, char *symbol, scope_node_t *curr_scope);
+scope_node_t * scope_check(symbol_node_t **symbol_table, char *symbol, scope_node_t *curr_scope);
 
 bool check_in_current_scope(symbol_node_t **symbol_table, char *symbol, scope_node_t *curr_scope);
 

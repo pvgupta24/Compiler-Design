@@ -21,21 +21,14 @@ single_operators    [+*/%^&.=-]
 
 
 %%
-\/\/(.)*[\n]                        {
+\/\/(.)*                            {
                                     }
 
 "/*"                                { multiline_comment(); }
 
-#                                   {  
-                                        trace("#");
-                                        return *yytext;  
+"#include"[ ]*"<"(_|{letter})({letter}|{number}|_)*".h>" {  
+                                        trace("Header File");
                                     }
-
-include                             {  
-                                        trace("INCLUDE");
-                                        return INCLUDE;  
-                                    }
-
 [\n]                                {
                                     }
 

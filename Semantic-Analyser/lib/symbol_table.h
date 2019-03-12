@@ -7,8 +7,10 @@ typedef struct symbol_node_struct symbol_node_t;
 struct symbol_node_struct {
   char *symbol;
   char *type;
+  char *arr_size;
   int scope_num;
   int line_number;
+  bool is_function_defined;
 
   // symbol_node_t* left; // For binary tree based symbol table 
   symbol_node_t *next;
@@ -22,9 +24,9 @@ void symbol_table_initialize(symbol_node_t **symbol_table);
 
 int symbol_table_hash(const char *symbol);
 
-void symbol_table_insert(symbol_node_t **symbol_table, const char* symbol, const int scope_num, const char *type, const int line_number);
+symbol_node_t * symbol_table_insert(symbol_node_t **symbol_table, const char* symbol, const int scope_num, const char *type, const char *arr_size, const int line_number);
 
-bool symbol_table_lookup(symbol_node_t **symbol_table, const char* symbol);
+symbol_node_t *symbol_table_lookup(symbol_node_t **symbol_table, const char* symbol);
 
 void symbol_table_free(symbol_node_t **symbol_table);
 
