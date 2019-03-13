@@ -31,6 +31,9 @@ extern char *yytext;
 extern int yylineno;
 
 char datatype[100];
+int num_params;
+
+symbol_node_t * redefined_error_check(char *symbol);
 
 %}
 
@@ -113,32 +116,44 @@ Identifier_List
     ;
 
 Function_Declaration
-    : Type IDENTIFIER '(' Formal_Param_List ')' ';' {          
+    : Type IDENTIFIER Bracket_open Formal_Param_List ')' ';' {          
                                                         redeclaration_error_check($2);                  
                                                         char funcType[100] = "Function: ";
                                                         strcat(funcType, datatype);
                                                         symbol_node_t *node = symbol_table_insert(symbol_table,$2, curr_scope->scope_num, funcType, "", yylineno);
                                                         node->is_function_defined = false;
+                                                        node->num_params = num_params;
                                                     }
     ;
 
 Function_Definition
-	: Type IDENTIFIER '(' Formal_Param_List ')' Compound_Statement      {          
-                                                                            redefined_error_check($2);
+	: Type IDENTIFIER Bracket_open Formal_Param_List ')' Compound_Statement      {          
+                                                                            symbol_node_t *node = redefined_error_check($2);
                                                                             char funcType[100] = "Function: ";
                                                                             strcat(funcType, datatype);
-                                                                            // symbol_table_insert(symbol_table,$2, curr_scope->scope_num, funcType, "", yylineno);
+                                                                            if(!node) {
+                                                                                symbol_node_t *node = symbol_table_insert(symbol_table,$2, curr_scope->scope_num, funcType, "", yylineno);
+                                                                                node->num_params = num_params;
+                                                                            }
+                                                                            else {
+                                                                                node->is_function_defined = true;
+                                                                                node->num_params = num_params;
+                                                                            }
                                                                         }
 	;
 
+Bracket_open
+    : '('                                                               { num_params = 0; }
+    ;
+
 Formal_Param_List
 	: VOID
-    | Type IDENTIFIER                                  {void_param_check($1); symbol_table_insert(symbol_table,$2 , curr_scope->scope_num, $1, "", yylineno);trace("Formal_Param_List Rule 1\n");}
-	| Type '*' IDENTIFIER                              {void_param_check($1); symbol_table_insert(symbol_table,$3 , curr_scope->scope_num, $1, "", yylineno);trace("Formal_Param_List Rule 2\n");}
-	| Type Array_Notation                              {void_param_check($1); trace("Formal_Param_List Rule 3\n");}
-	| Type IDENTIFIER ',' Formal_Param_List            {void_param_check($1); symbol_table_insert(symbol_table,$2 , curr_scope->scope_num, $1, "", yylineno);trace("Formal_Param_List Rule 4\n");}
-	| Type '*' IDENTIFIER ',' Formal_Param_List        {void_param_check($1); symbol_table_insert(symbol_table,$3 , curr_scope->scope_num, $1, "", yylineno);trace("Formal_Param_List Rule 5\n");}
-	| Type Array_Notation ',' Formal_Param_List        {void_param_check($1); trace("Formal_Param_List Rule 6\n");}
+    | Type IDENTIFIER                                  { num_params++; void_param_check($1); symbol_table_insert(symbol_table,$2 , curr_scope->scope_num, $1, "", yylineno);trace("Formal_Param_List Rule 1\n");}
+	| Type '*' IDENTIFIER                              { num_params++; void_param_check($1); symbol_table_insert(symbol_table,$3 , curr_scope->scope_num, $1, "", yylineno);trace("Formal_Param_List Rule 2\n");}
+	| Type Array_Notation                              { num_params++; void_param_check($1); trace("Formal_Param_List Rule 3\n");}
+	| Type IDENTIFIER ',' Formal_Param_List            { num_params++; void_param_check($1); symbol_table_insert(symbol_table,$2 , curr_scope->scope_num, $1, "", yylineno);trace("Formal_Param_List Rule 4\n");}
+	| Type '*' IDENTIFIER ',' Formal_Param_List        { num_params++; void_param_check($1); symbol_table_insert(symbol_table,$3 , curr_scope->scope_num, $1, "", yylineno);trace("Formal_Param_List Rule 5\n");}
+	| Type Array_Notation ',' Formal_Param_List        { num_params++; void_param_check($1); trace("Formal_Param_List Rule 6\n");}
 	|
 	;
 
@@ -206,8 +221,8 @@ Define_Assign
     ;
 
 Param_List
-    : Expression
-    | Expression ',' Param_List
+    : Expression                                            { num_params++; }
+    | Expression ',' Param_List                             { num_params++; }
     | 
     ;
 
@@ -348,7 +363,7 @@ Else_Statement
     ;
 
 Function_Call
-    : IDENTIFIER '(' Param_List ')'     {scope_error_check($1); check_is_function($1); symbol_table_insert(symbol_table, $1, curr_scope->scope_num, "Function", "", yylineno);trace("Function Call\n");} 
+    : IDENTIFIER Bracket_open Param_List ')'     { scope_error_check($1); num_param_check($1); check_is_function($1); /*symbol_table_insert(symbol_table, $1, curr_scope->scope_num, "Function", "", yylineno);trace("Function Call\n"); */} 
     ;
 
 Include_Statement
@@ -369,19 +384,31 @@ inline void scope_error_check(char *symbol){
     }
 }
 
+inline void num_param_check(char *symbol) {
+
+    symbol_node_t *node = scope_check(symbol_table, symbol, curr_scope);
+    if(node != NULL && num_params > node->num_params) {
+        char msg[100] = "Too many arguments passed to ";
+        yyerror(strcat(msg, symbol));
+    }
+    else if(node != NULL && num_params < node->num_params) {
+        char msg[100] = "Too few arguments passed to ";
+        yyerror(strcat(msg, symbol));
+    }
+}
+
 inline void redeclaration_error_check(char *symbol){
     if(check_in_current_scope(symbol_table, symbol, curr_scope)){
         yyerror(strcat(symbol, " already declared in current scope"));
     }
 }
 
-inline void redefined_error_check(char *symbol){
+symbol_node_t * redefined_error_check(char *symbol){
     symbol_node_t *node = scope_check(symbol_table, symbol, curr_scope);
     if(node != NULL && node->is_function_defined)
         yyerror(strcat(symbol, " is a redefinition"));
 
-    if(node != NULL)
-        node->is_function_defined = true;
+    return node;
 }
 
 inline void arr_dimension_check(char *symbol, char *arr_size){

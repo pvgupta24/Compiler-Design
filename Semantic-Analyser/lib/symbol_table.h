@@ -11,6 +11,7 @@ struct symbol_node_struct {
   int scope_num;
   int line_number;
   bool is_function_defined;
+  int num_params;
 
   // symbol_node_t* left; // For binary tree based symbol table 
   symbol_node_t *next;
