@@ -163,6 +163,7 @@ Array_Notation
                                         char arrayType[100] = "Array: ";strcat(arrayType, datatype);
                                         arr_dimension_check($1, $3);
                                         symbol_table_insert(symbol_table,$1, curr_scope->scope_num, arrayType, $3, yylineno);
+                                        arr_subscript_check($1);
                                     }
     | '*' IDENTIFIER '[' CONSTANT_INTEGER ']' {   
                                         redeclaration_error_check($2);
@@ -173,12 +174,14 @@ Array_Notation
                                         char arrayType[100] = "Array: ";strcat(arrayType, datatype);
                                         symbol_table_insert(symbol_table,$2, curr_scope->scope_num, arrayType, $4, yylineno);
                                         datatype[len] = '\0';
+                                        arr_subscript_check($2);
                                     }
     | '&' IDENTIFIER '[' CONSTANT_INTEGER ']' {
                                         redeclaration_error_check($2);
                                         arr_dimension_check($2, $4);
                                         char arrayType[100] = "Array: ";strcat(arrayType, datatype);
                                         symbol_table_insert(symbol_table,$2, curr_scope->scope_num, arrayType, $4, yylineno);
+                                        arr_subscript_check($2);
                                     }
     | IDENTIFIER '[' '-' CONSTANT_INTEGER ']' {   
                                         yyerror(strcat($1, " has non-positive array size"));
@@ -202,7 +205,7 @@ Define_Assign
                                                                 //redeclaration_error_check($2);
                                                                 symbol_table_insert(symbol_table,$2 , curr_scope->scope_num, datatype, "", yylineno);
                                                             }
-    | Array_Notation Assignment_Operator Expression                   
+    | Array_Notation Assignment_Operator Expression                
     ;
 
 Param_List
@@ -214,7 +217,7 @@ Param_List
 Assignment
     : IDENTIFIER Assignment_Operator Expression           { scope_error_check($1); trace("Assignment Rule 1\n");}
     | '*' IDENTIFIER Assignment_Operator Expression       { scope_error_check($2); trace("Assignment Rule 2\n");}  
-    | Array_Notation Assignment_Operator Expression
+    | Array_Notation Assignment_Operator Expression       { trace("Array Element Assign Rule"); }
     | Primary
     ;
 
@@ -268,6 +271,7 @@ Multiplicative_Expression
 
 Primary
     : '(' Expression ')'
+    | '(' Assignment ')'
     | CONSTANT_INTEGER     {symbol_table_insert(constant_table, $1, -1, "int", "", yylineno); trace("CONSTANT_INTEGER\n");}
     | CONSTANT_FLOAT       {symbol_table_insert(constant_table, $1, -1, "float", "", yylineno); trace("CONSTANT_FLOAT\n");}
     | CONSTANT_CHAR        {symbol_table_insert(constant_table, $1, -1, "char", "", yylineno); trace("CONSTANT_CHAR\n");}
@@ -310,6 +314,7 @@ Statement
     | For_Statement  
     | If_Statement  
     | Assignment    ';'
+    | Expression ';'
     | Return_Statement    
     | Do_While_Statement      
     | BREAK ';'
@@ -387,6 +392,13 @@ inline void redefined_error_check(char *symbol){
 inline void arr_dimension_check(char *symbol, char *arr_size){
     if(atoi(arr_size) < 1){
         yyerror(strcat(symbol, " has non-positive array size"));
+    }
+}
+
+inline void arr_subscript_check(char *symbol){
+    symbol_node_t *node = symbol_table_lookup(symbol_table, symbol);
+    if(!strstr(node->type, "Array")){
+        yyerror(strcat(symbol, " is not an array"));
     }
 }
 
