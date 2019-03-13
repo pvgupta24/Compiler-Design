@@ -59,7 +59,7 @@ scope_node_t *goto_parent_scope(scope_node_t *curr_scope)
     return parent;
 }
 
-bool scope_check(symbol_node_t **symbol_table, char *symbol, scope_node_t *curr_scope)
+scope_node_t *scope_check(symbol_node_t **symbol_table, char *symbol, scope_node_t *curr_scope)
 {
     int hash_index = symbol_table_hash(symbol);
     for (symbol_node_t *curr = symbol_table[hash_index]; curr != NULL; curr = curr->next)
@@ -69,12 +69,12 @@ bool scope_check(symbol_node_t **symbol_table, char *symbol, scope_node_t *curr_
         {
             if (check_within_scope(curr_scope, curr->scope_num))
             {
-                return true;
+                return curr;
             }
         }
     }
 
-    return false;
+    return NULL;
 }
 
 bool check_in_current_scope(symbol_node_t **symbol_table, char *symbol, scope_node_t *curr_scope){
@@ -85,7 +85,7 @@ bool check_in_current_scope(symbol_node_t **symbol_table, char *symbol, scope_no
         // Symbol found in table
         if (!strcmp(curr->symbol, symbol))
         {
-            if (curr_scope == curr->scope_num)
+            if (curr_scope->scope_num == curr->scope_num)
             {
                 return true;
             }
