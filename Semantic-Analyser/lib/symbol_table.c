@@ -32,6 +32,7 @@ symbol_node_t *create_symbol_node(const char* symbol, const char *type, const in
    node->scope_num = scope_num;
    node->line_number = line_number;
    node->next = NULL;
+   node->num_params = 0;
    node->is_function_defined = true;
 
    return node;
