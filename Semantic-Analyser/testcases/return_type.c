@@ -5,8 +5,8 @@ char func(){
     return x;
 }
 
-int main(){
+void main(){
 
     func();
-    return 0;
+    return 5;
 }
