@@ -39,6 +39,14 @@ symbol_node_t * redefined_error_check(char *symbol);
 
 // ICG 3-address-code
 stack *three_address_code_stack;
+TAC_code_stack *TAC_code;
+
+TAC_buffer_node *curr_buff = NULL;
+bool BUFFER_ENABLED = true;
+// If BUFFER_ENABLED is true, TAC is directed to a buffer instead of stdout
+
+char temp_buf[100];
+int LABEL_COUNT = 1;
 %}
 
 // %token INT FLOAT CHAR DOUBLE VOID RETURN
@@ -56,6 +64,7 @@ stack *three_address_code_stack;
 // To allow for mutiple datatypes
 %union {
 	char char_ptr[100];
+    int intval;
 }
 
 %token <char_ptr> IDENTIFIER
@@ -66,11 +75,15 @@ stack *three_address_code_stack;
 %token <char_ptr> VOID
 
 %type <char_ptr> Type
+%type <intval> IfNotGoto ElseNotGoto NotWhileGoto NotWhileLabel NotDoWhileLabel
 
 %right '=' ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN XOR_ASSIGN OR_ASSIGN         
 %left LOGIC_AND LOGIC_OR NOT INCREMENT_OPERATOR DECREMENT_OPERATOR
 %left LESSER_EQUAL GREATER_EQUAL DOUBLE_EQUAL NOT_EQUAL LESSER_THAN GREATER_THAN             
 %left '+' '-' '*' '/' '%' '^' '&' 
+
+%nonassoc IfWithoutElse
+%nonassoc ELSE
 
 %start Begin
 
@@ -120,30 +133,30 @@ Identifier_List
     ;
 
 Function_Declaration
-    : Type IDENTIFIER Bracket_open Formal_Param_List ')' ';' {          
-                                                        redeclaration_error_check($2);                  
-                                                        char funcType[100] = "Function: ";
-                                                        strcat(funcType, datatype);
-                                                        symbol_node_t *node = symbol_table_insert(symbol_table,$2, curr_scope->scope_num, funcType, "", yylineno);
-                                                        node->is_function_defined = false;
-                                                        node->num_params = num_params;
-                                                    }
+        : Type IDENTIFIER Bracket_open Formal_Param_List ')' ';'    {          
+                                                                        redeclaration_error_check($2);                  
+                                                                        char funcType[100] = "Function: ";
+                                                                        strcat(funcType, datatype);
+                                                                        symbol_node_t *node = symbol_table_insert(symbol_table,$2, curr_scope->scope_num, funcType, "", yylineno);
+                                                                        node->is_function_defined = false;
+                                                                        node->num_params = num_params;
+                                                                    }
     ;
 
 Function_Definition
-	: Type IDENTIFIER Bracket_open Formal_Param_List ')' Compound_Statement      {          
-                                                                            symbol_node_t *node = redefined_error_check($2);
-                                                                            char funcType[100] = "Function: ";
-                                                                            strcat(funcType, datatype);
-                                                                            if(!node) {
-                                                                                symbol_node_t *node = symbol_table_insert(symbol_table,$2, curr_scope->scope_num, funcType, "", yylineno);
-                                                                                node->num_params = num_params;
-                                                                            }
-                                                                            else {
-                                                                                node->is_function_defined = true;
-                                                                                node->num_params = num_params;
-                                                                            }
-                                                                        }
+	: Type IDENTIFIER Bracket_open Formal_Param_List ')' Compound_Statement     {          
+                                                                                    symbol_node_t *node = redefined_error_check($2);
+                                                                                    char funcType[100] = "Function: ";
+                                                                                    strcat(funcType, datatype);
+                                                                                    if(!node) {
+                                                                                        symbol_node_t *node = symbol_table_insert(symbol_table,$2, curr_scope->scope_num, funcType, "", yylineno);
+                                                                                        node->num_params = num_params;
+                                                                                    }
+                                                                                    else {
+                                                                                        node->is_function_defined = true;
+                                                                                        node->num_params = num_params;
+                                                                                    }
+                                                                                }
 	;
 
 Bracket_open
@@ -178,30 +191,30 @@ Modifiers
     ;
 
 Array_Notation
-    : IDENTIFIER '[' CONSTANT_INTEGER ']' {   
-                                        char arrayType[100] = "Array: ";strcat(arrayType, datatype);
-                                        arr_dimension_check($1, $3);
-                                        symbol_table_insert(symbol_table,$1, curr_scope->scope_num, arrayType, $3, yylineno);
-                                        arr_subscript_check($1);
-                                    }
-    | '*' IDENTIFIER '[' CONSTANT_INTEGER ']' {   
-                                        redeclaration_error_check($2);
-                                        arr_dimension_check($2, $4);
-                                        int len = strlen(datatype);
-                                        datatype[len] = '*';
-                                        datatype[len +1] = '\0';                                
-                                        char arrayType[100] = "Array: ";strcat(arrayType, datatype);
-                                        symbol_table_insert(symbol_table,$2, curr_scope->scope_num, arrayType, $4, yylineno);
-                                        datatype[len] = '\0';
-                                        arr_subscript_check($2);
-                                    }
-    | '&' IDENTIFIER '[' CONSTANT_INTEGER ']' {
-                                        redeclaration_error_check($2);
-                                        arr_dimension_check($2, $4);
-                                        char arrayType[100] = "Array: ";strcat(arrayType, datatype);
-                                        symbol_table_insert(symbol_table,$2, curr_scope->scope_num, arrayType, $4, yylineno);
-                                        arr_subscript_check($2);
-                                    }
+    : IDENTIFIER '[' CONSTANT_INTEGER ']'   {   
+                                                char arrayType[100] = "Array: ";strcat(arrayType, datatype);
+                                                arr_dimension_check($1, $3);
+                                                symbol_table_insert(symbol_table,$1, curr_scope->scope_num, arrayType, $3, yylineno);
+                                                arr_subscript_check($1);
+                                            }
+    | '*' IDENTIFIER '[' CONSTANT_INTEGER ']'   {   
+                                                    redeclaration_error_check($2);
+                                                    arr_dimension_check($2, $4);
+                                                    int len = strlen(datatype);
+                                                    datatype[len] = '*';
+                                                    datatype[len +1] = '\0';                                
+                                                    char arrayType[100] = "Array: ";strcat(arrayType, datatype);
+                                                    symbol_table_insert(symbol_table,$2, curr_scope->scope_num, arrayType, $4, yylineno);
+                                                    datatype[len] = '\0';
+                                                    arr_subscript_check($2);
+                                                }
+    | '&' IDENTIFIER '[' CONSTANT_INTEGER ']'   {
+                                                    redeclaration_error_check($2);
+                                                    arr_dimension_check($2, $4);
+                                                    char arrayType[100] = "Array: ";strcat(arrayType, datatype);
+                                                    symbol_table_insert(symbol_table,$2, curr_scope->scope_num, arrayType, $4, yylineno);
+                                                    arr_subscript_check($2);
+                                                }
     | IDENTIFIER '[' '-' CONSTANT_INTEGER ']' {   
                                         yyerror(strcat($1, " has non-positive array size"));
                                     }
@@ -217,15 +230,22 @@ Array_Notation
 
 Define_Assign
     : IDENTIFIER Assignment_Operator Expression             {
-        //redeclaration_error_check($1);
-        symbol_table_insert(symbol_table,$1 , curr_scope->scope_num, datatype, "", yylineno);
-        trace("Define_Assign Rule 1\n");
+                                                                //redeclaration_error_check($1);
+                                                                symbol_table_insert(symbol_table,$1 , curr_scope->scope_num, datatype, "", yylineno);
+                                                                trace("Define_Assign Rule 1\n");
 
-        stack_node op = pop_stack(three_address_code_stack);
+                                                                stack_node op = pop_stack(three_address_code_stack);
+                                                                curr_buff = get_new_node(TAC_code);
+                                                                push_stack(three_address_code_stack, $1);
+                                                                
+                                                                if(BUFFER_ENABLED) {
+                                                                    sprintf(temp_buf, "%s = %s\n", $1, op.var_name);
+                                                                    strcat(curr_buff->code, temp_buf);
+                                                                }
+                                                                else
+                                                                    printf("%s = %s\n", $1, op.var_name);
 
-        push_stack(three_address_code_stack, $1);
-        printf("%s = %s\n", $1, op.var_name);
-    }  
+                                                            }  
     | '*' IDENTIFIER Assignment_Operator Expression         {
                                                                 //redeclaration_error_check($2);
                                                                 symbol_table_insert(symbol_table,$2 , curr_scope->scope_num, datatype, "", yylineno);
@@ -240,18 +260,24 @@ Param_List
     ;
 
 Assignment
-    : IDENTIFIER Assignment_Operator Expression           { 
-        scope_error_check($1); 
-        trace("Assignment Rule 1\n");
+    : IDENTIFIER Assignment_Operator Expression             { 
+                                                                scope_error_check($1); 
+                                                                trace("Assignment Rule 1\n");
 
-        stack_node op = pop_stack(three_address_code_stack);
+                                                                stack_node op = pop_stack(three_address_code_stack);
+                                                                curr_buff = get_new_node(TAC_code);
+                                                                push_stack(three_address_code_stack, $1);
 
-        push_stack(three_address_code_stack, $1);
-        printf("%s = %s\n", $1, op.var_name);
+                                                                if(BUFFER_ENABLED) {
+                                                                    sprintf(temp_buf, "%s = %s\n", $1, op.var_name);
+                                                                    strcat(curr_buff->code, temp_buf);
+                                                                }
+                                                                else
+                                                                    printf("%s = %s\n", $1, op.var_name);
 
-    }
-    | '*' IDENTIFIER Assignment_Operator Expression       { scope_error_check($2); trace("Assignment Rule 2\n");}  
-    | Array_Notation Assignment_Operator Expression       { trace("Array Element Assign Rule"); }
+                                                            }
+    | '*' IDENTIFIER Assignment_Operator Expression         { scope_error_check($2); trace("Assignment Rule 2\n");}  
+    | Array_Notation Assignment_Operator Expression         { trace("Array Element Assign Rule"); }
     | Primary
     ;
 
@@ -275,73 +301,84 @@ Expression
 
 Logical_Expression
     : Relational_Expression
-    | Logical_Expression LOGIC_AND Relational_Expression
-    | Logical_Expression LOGIC_OR Relational_Expression
-    | NOT Relational_Expression 
+    | Logical_Expression LOGIC_AND Relational_Expression    {  
+                                                                char op[3] = "&&";
+                                                                print_TAC_operator(op);
+                                                            }
+    | Logical_Expression LOGIC_OR Relational_Expression     {  
+                                                                char op[3] = "||";
+                                                                print_TAC_operator(op);
+                                                            }
+    | NOT Relational_Expression                             {
+                                                                stack_node op = pop_stack(three_address_code_stack);
+                                                                curr_buff = get_new_node(TAC_code);
+                                                                push_stack(three_address_code_stack, TEMP_VAR);
+                                                                print_stack_top(three_address_code_stack, curr_buff);
+
+                                                                if(BUFFER_ENABLED) {
+                                                                    sprintf(temp_buf, " = NOT %s\n", op.var_name);
+                                                                    strcat(curr_buff->code, temp_buf);
+                                                                }
+                                                                else
+                                                                    printf(" = NOT %s\n", op.var_name);
+                                                            }
     ;
 
 Relational_Expression
     : Additive_Expression
-    | Relational_Expression GREATER_THAN Additive_Expression
-    | Relational_Expression LESSER_THAN Additive_Expression
-    | Relational_Expression GREATER_EQUAL Additive_Expression
-    | Relational_Expression LESSER_EQUAL Additive_Expression
-    | Relational_Expression DOUBLE_EQUAL Additive_Expression
-    | Relational_Expression NOT_EQUAL Additive_Expression
+    | Relational_Expression GREATER_THAN Additive_Expression    {  
+                                                                    char op[3] = ">";
+                                                                    print_TAC_operator(op);
+                                                                }
+    | Relational_Expression LESSER_THAN Additive_Expression     {  
+                                                                    char op[3] = "<";
+                                                                    print_TAC_operator(op);
+                                                                }
+    | Relational_Expression GREATER_EQUAL Additive_Expression   {  
+                                                                    char op[3] = ">=";
+                                                                    print_TAC_operator(op);
+                                                                }
+    | Relational_Expression LESSER_EQUAL Additive_Expression    {  
+                                                                    char op[3] = "<=";
+                                                                    print_TAC_operator(op);
+                                                                }
+    | Relational_Expression DOUBLE_EQUAL Additive_Expression    {  
+                                                                    char op[3] = "==";
+                                                                    print_TAC_operator(op);
+                                                                }
+    | Relational_Expression NOT_EQUAL Additive_Expression       {  
+                                                                    char op[3] = "<>";
+                                                                    print_TAC_operator(op);
+                                                                }
     ;
 
 Additive_Expression
     : Multiplicative_Expression
-    | Additive_Expression '+' Multiplicative_Expression {
-
-        stack_node op2 = pop_stack(three_address_code_stack);
-        stack_node op1 = pop_stack(three_address_code_stack);
-
-        push_stack(three_address_code_stack, TEMP_VAR);
-        print_stack_top(three_address_code_stack);
-        printf(" = %s + %s\n", op1.var_name, op2.var_name);
-    }
+    | Additive_Expression '+' Multiplicative_Expression {  
+                                                            char op[3] = "+";
+                                                            print_TAC_operator(op);
+                                                        }
     | Additive_Expression '-' Multiplicative_Expression {
-        
-        stack_node op2 = pop_stack(three_address_code_stack);
-        stack_node op1 = pop_stack(three_address_code_stack);
-
-        push_stack(three_address_code_stack, TEMP_VAR);
-        print_stack_top(three_address_code_stack);
-        printf(" = %s - %s\n", op1.var_name, op2.var_name);
-    }
+                                                            char op[3] = "-";
+                                                            print_TAC_operator(op);
+                                                        }
 
     ;
 
 Multiplicative_Expression
     : Primary
-    | Multiplicative_Expression '*' Primary                             {
-        
-        stack_node op2 = pop_stack(three_address_code_stack);
-        stack_node op1 = pop_stack(three_address_code_stack);
-
-        push_stack(three_address_code_stack, TEMP_VAR);
-        print_stack_top(three_address_code_stack);
-        printf(" = %s * %s\n", op1.var_name, op2.var_name);
-    }
-    | Multiplicative_Expression '/' Primary                             {
-
-        stack_node op2 = pop_stack(three_address_code_stack);
-        stack_node op1 = pop_stack(three_address_code_stack);
-
-        push_stack(three_address_code_stack, TEMP_VAR);
-        print_stack_top(three_address_code_stack);
-        printf(" = %s / %s\n", op1.var_name, op2.var_name);
-    } 
-    | Multiplicative_Expression '%' Primary                             {
-
-        stack_node op2 = pop_stack(three_address_code_stack);
-        stack_node op1 = pop_stack(three_address_code_stack);
-
-        push_stack(three_address_code_stack, TEMP_VAR);
-        print_stack_top(three_address_code_stack);
-        printf(" = %s %% %s\n", op1.var_name, op2.var_name);
-    }
+    | Multiplicative_Expression '*' Primary             {
+                                                            char op[3] = "*";
+                                                            print_TAC_operator(op);
+                                                        }
+    | Multiplicative_Expression '/' Primary             {
+                                                            char op[3] = "-";
+                                                            print_TAC_operator(op);
+                                                        } 
+    | Multiplicative_Expression '%' Primary             {
+                                                            char op[3] = "%";
+                                                            print_TAC_operator(op);
+                                                        }
     ;
 
 Primary
@@ -402,14 +439,59 @@ Return_Statement
     ;
 
 While_Statement
-    : WHILE '(' Expression ')' Statement                                                        
-    | WHILE '(' Expression ')' Compound_Statement
+    : WHILE NotWhileLabel '(' Expression ')' NotWhileGoto Statement                 {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(curr_buff->code, "GOTO L%d\n", $2);
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(curr_buff->code, "\nL%d:\n", $6);
+                                                                                    }                                                    
+    | WHILE NotWhileLabel '(' Expression ')' NotWhileGoto Compound_Statement        {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(curr_buff->code, "GOTO L%d\n", $2);
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(curr_buff->code, "\nL%d:\n", $6);
+                                                                                    }  
+    ;
+
+NotWhileLabel
+    :   {
+            curr_buff = get_new_node(TAC_code);
+            sprintf(temp_buf, "L%d:\n", LABEL_COUNT);
+            strcat(curr_buff->code, temp_buf);
+            $$ = LABEL_COUNT++;
+        }
+    ;
+
+NotWhileGoto
+    :   {
+            stack_node reg = pop_stack(three_address_code_stack);
+            curr_buff = get_new_node(TAC_code);
+        
+            sprintf(temp_buf, "IF NOT %s GOTO L%d\n", reg.var_name, LABEL_COUNT);
+            strcat(curr_buff->code, temp_buf);
+
+            $$ = LABEL_COUNT++;        
+        }
     ;
 
 Do_While_Statement
-    : DO Compound_Statement WHILE '(' Expression ')' ';'
+    : DO NotDoWhileLabel Compound_Statement WHILE '(' Expression ')' ';'                {
+                                                                                            stack_node reg = pop_stack(three_address_code_stack);
+                                                                                            curr_buff = get_new_node(TAC_code);
+                                                                                        
+                                                                                            sprintf(temp_buf, "IF %s GOTO L%d\n", reg.var_name, $2);
+                                                                                            strcat(curr_buff->code, temp_buf);
+                                                                                        }
     ;
 
+NotDoWhileLabel 
+    :   {
+            curr_buff = get_new_node(TAC_code);
+            sprintf(temp_buf, "L%d:\n", LABEL_COUNT);
+            strcat(curr_buff->code, temp_buf);
+            $$ = LABEL_COUNT++;
+        }
+    ;
 
 For_Statement
     : FOR '(' Assignment ';' Expression ';' Assignment ')' Statement 
@@ -417,14 +499,86 @@ For_Statement
     ;
 
 If_Statement
-    : IF '(' Expression ')' Statement Else_Statement     
-    | IF '(' Expression ')' Compound_Statement Else_Statement
+    : IF '(' Expression ')' IfNotGoto Statement                                     {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(temp_buf, "\nL%d:\n", $5);
+                                                                                        strcat(curr_buff->code, temp_buf);
+                                                                                    } %prec IfWithoutElse
+    | IF '(' Expression ')' IfNotGoto Compound_Statement                            {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(temp_buf, "\nL%d:\n", $5);
+                                                                                        strcat(curr_buff->code, temp_buf);
+                                                                                    } %prec IfWithoutElse
+    
+    | IF '(' Expression ')' IfNotGoto Statement ELSE ElseNotGoto                         {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(temp_buf, "\nL%d:\n", $5);
+                                                                                        strcat(curr_buff->code, temp_buf);
+                                                                                    } 
+        Statement                                                                   {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(temp_buf, "\nL%d:\n", $8);
+                                                                                        strcat(curr_buff->code, temp_buf);
+                                                                                    } %prec ELSE
+    
+    | IF '(' Expression ')' IfNotGoto Statement ELSE ElseNotGoto                    {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(temp_buf, "\nL%d:\n", $5);
+                                                                                        strcat(curr_buff->code, temp_buf);
+                                                                                    } 
+        Compound_Statement                                                          {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(temp_buf, "\nL%d:\n", $8);
+                                                                                        strcat(curr_buff->code, temp_buf);
+                                                                                    } %prec ELSE
+    
+    | IF '(' Expression ')' IfNotGoto Compound_Statement ELSE ElseNotGoto           {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(temp_buf, "\nL%d:\n", $5);
+                                                                                        strcat(curr_buff->code, temp_buf);
+                                                                                    } 
+        Statement                                                                   {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(temp_buf, "\nL%d:\n", $8);
+                                                                                        strcat(curr_buff->code, temp_buf);
+                                                                                    } %prec ELSE
+    
+    | IF '(' Expression ')' IfNotGoto Compound_Statement ELSE ElseNotGoto           {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(temp_buf, "\nL%d:\n", $5);
+                                                                                        strcat(curr_buff->code, temp_buf);
+                                                                                    } 
+        Compound_Statement                                                          {
+                                                                                        curr_buff = get_new_node(TAC_code);
+                                                                                        sprintf(temp_buf, "\nL%d:\n", $8);
+                                                                                        strcat(curr_buff->code, temp_buf);
+                                                                                    } %prec ELSE
+    
     ;
 
-Else_Statement
-    : ELSE Compound_Statement
-    | ELSE Statement
-    |
+IfNotGoto
+    :   {
+            stack_node reg = pop_stack(three_address_code_stack);
+            curr_buff = get_new_node(TAC_code);
+            
+            if(BUFFER_ENABLED) {
+                sprintf(temp_buf, "IF NOT %s GOTO L%d\n", reg.var_name, LABEL_COUNT);
+                strcat(curr_buff->code, temp_buf);
+            }
+            else
+                printf("IF NOT %s GOTO L%d\n", reg.var_name, LABEL_COUNT);
+
+            $$ = LABEL_COUNT++;
+        }
+    ;
+
+ElseNotGoto
+    :   {
+            curr_buff = get_new_node(TAC_code);
+            sprintf(temp_buf, "GOTO L%d\n", LABEL_COUNT);
+            strcat(curr_buff->code, temp_buf);
+            $$ = LABEL_COUNT++;
+        }
     ;
 
 Function_Call
@@ -442,6 +596,23 @@ Include
 
 
 %%
+
+inline void print_TAC_operator(char *op) {
+
+    curr_buff = get_new_node(TAC_code);
+    stack_node op2 = pop_stack(three_address_code_stack);
+    stack_node op1 = pop_stack(three_address_code_stack);
+    
+    push_stack(three_address_code_stack, TEMP_VAR);
+    print_stack_top(three_address_code_stack, curr_buff);
+    
+    if(BUFFER_ENABLED) {
+        sprintf(temp_buf, " = %s %s %s\n", op1.var_name, op, op2.var_name);
+        strcat(curr_buff->code, temp_buf);
+    }
+    else
+        printf(" = %s %s %s\n", op1.var_name, op, op2.var_name);
+}
 
 inline void scope_error_check(char *symbol){
     if(!scope_check(symbol_table, symbol, curr_scope)){
@@ -518,11 +689,16 @@ int main()
     symbol_table_initialize(symbol_table);
     symbol_table_initialize(constant_table);
     three_address_code_stack = initialize_stack();
+    
+    TAC_code = initialize_code_stack();
+    printf("\n");
 
     yyparse();
 
-    symbol_table_print(symbol_table, "Symbol Table");
-    symbol_table_print(constant_table, "Constant Table");
+    print_TAC_code(TAC_code);
+
+    // symbol_table_print(symbol_table, "Symbol Table");
+    // symbol_table_print(constant_table, "Constant Table");
     printf(FORE_GRN "\n\n Parsing complete  ✔ \n\n" RESET); 
     
     symbol_table_free(symbol_table);
