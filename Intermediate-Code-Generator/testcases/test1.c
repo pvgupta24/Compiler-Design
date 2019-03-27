@@ -3,6 +3,9 @@
 int main() {
 
     int a, b, c;
-    int x = 5 + a*(2-b);
-    x = 5 +6;
+    int x;
+    
+    do {
+        a = a+1;
+    } while(a<5);
 }
