@@ -5,7 +5,7 @@
 #define STACK_VAR_LENGTH 100
 #define STACK_CAPACITY 100
 #define TEMP_VAR "#REG"
-#define BUFFER_STACK_CAPACITY 7
+#define BUFFER_STACK_CAPACITY 100
 
 typedef struct stack_node stack_node;
 typedef struct stack stack;

@@ -75,7 +75,7 @@ int LABEL_COUNT = 1;
 %token <char_ptr> VOID
 
 %type <char_ptr> Type
-%type <intval> IfNotGoto ElseNotGoto NotWhileGoto NotWhileLabel NotDoWhileLabel
+%type <intval> IfNotGoto ElseNotGoto NotWhileGoto NotWhileLabel NotDoWhileLabel RepeatForLabel ForExitGoto
 
 %right '=' ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN XOR_ASSIGN OR_ASSIGN         
 %left LOGIC_AND LOGIC_OR NOT INCREMENT_OPERATOR DECREMENT_OPERATOR
@@ -494,9 +494,72 @@ NotDoWhileLabel
     ;
 
 For_Statement
-    : FOR '(' Assignment ';' Expression ';' Assignment ')' Statement 
-    | FOR '(' Assignment ';' Expression ';' Assignment ')' Compound_Statement 
+    : FOR '(' Assignment ';' RepeatForLabel Expression ';' ForExitGoto Assignment IncTop
+        ')' Statement                                                                       {
+                                                                                                TAC_buffer_node *temp = TAC_code->stack_arr[TAC_code->top -1];
+                                                                                                while(temp->next != NULL)
+                                                                                                    temp = temp->next;
+                                                                                                temp->next = TAC_code->stack_arr[TAC_code->top];
+                                                                                                TAC_code->stack_arr[TAC_code->top] = NULL;
+
+                                                                                                while(temp->next != NULL)
+                                                                                                    temp = temp->next;
+                                                                                                temp->next = TAC_code->stack_arr[TAC_code->top -2];
+                                                                                                TAC_code->stack_arr[TAC_code->top -2] = TAC_code->stack_arr[TAC_code->top -1];
+                                                                                                TAC_code->stack_arr[TAC_code->top -1] = NULL;
+                                                                                                TAC_code->top -= 2;
+
+                                                                                                curr_buff = get_new_node(TAC_code);
+                                                                                                sprintf(curr_buff->code, "GOTO L%d\n", $5);
+                                                                                                curr_buff = get_new_node(TAC_code);
+                                                                                                sprintf(curr_buff->code, "\nL%d:\n", $8);
+                                                                                            }
+    | FOR '(' Assignment ';' RepeatForLabel Expression ';' ForExitGoto Assignment IncTop
+        ')' Compound_Statement                                                              {
+                                                                                                TAC_buffer_node *temp = TAC_code->stack_arr[TAC_code->top -1];
+                                                                                                while(temp->next != NULL)
+                                                                                                    temp = temp->next;
+                                                                                                temp->next = TAC_code->stack_arr[TAC_code->top];
+                                                                                                TAC_code->stack_arr[TAC_code->top] = NULL;
+
+                                                                                                while(temp->next != NULL)
+                                                                                                    temp = temp->next;
+                                                                                                temp->next = TAC_code->stack_arr[TAC_code->top -2];
+                                                                                                TAC_code->stack_arr[TAC_code->top -2] = TAC_code->stack_arr[TAC_code->top -1];
+                                                                                                TAC_code->stack_arr[TAC_code->top -1] = NULL;
+                                                                                                TAC_code->top -= 2;
+
+                                                                                                curr_buff = get_new_node(TAC_code);
+                                                                                                sprintf(curr_buff->code, "GOTO L%d\n", $5);
+                                                                                                curr_buff = get_new_node(TAC_code);
+                                                                                                sprintf(curr_buff->code, "\nL%d:\n", $8);
+                                                                                            }
     ;
+
+IncTop
+    : { TAC_code->top++; }
+    ;
+
+RepeatForLabel
+    :   {
+            curr_buff = get_new_node(TAC_code);
+            sprintf(temp_buf, "L%d:\n", LABEL_COUNT);
+            strcat(curr_buff->code, temp_buf);
+            $$ = LABEL_COUNT++;
+        }
+    ;
+
+ForExitGoto
+    :   {
+            stack_node reg = pop_stack(three_address_code_stack);
+            curr_buff = get_new_node(TAC_code);
+            
+            sprintf(temp_buf, "IF NOT %s GOTO L%d\n", reg.var_name, LABEL_COUNT);
+            strcat(curr_buff->code, temp_buf);
+
+            $$ = LABEL_COUNT++;
+            TAC_code->top++;
+        } 
 
 If_Statement
     : IF '(' Expression ')' IfNotGoto Statement                                     {
