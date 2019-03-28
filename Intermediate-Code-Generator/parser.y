@@ -47,6 +47,7 @@ bool BUFFER_ENABLED = true;
 
 char temp_buf[100];
 int LABEL_COUNT = 1;
+int loopStartLabel = -1, loopEndLabel = -1;
 %}
 
 // %token INT FLOAT CHAR DOUBLE VOID RETURN
@@ -144,19 +145,29 @@ Function_Declaration
     ;
 
 Function_Definition
-	: Type IDENTIFIER Bracket_open Formal_Param_List ')' Compound_Statement     {          
-                                                                                    symbol_node_t *node = redefined_error_check($2);
-                                                                                    char funcType[100] = "Function: ";
-                                                                                    strcat(funcType, datatype);
-                                                                                    if(!node) {
-                                                                                        symbol_node_t *node = symbol_table_insert(symbol_table,$2, curr_scope->scope_num, funcType, "", yylineno);
-                                                                                        node->num_params = num_params;
-                                                                                    }
-                                                                                    else {
-                                                                                        node->is_function_defined = true;
-                                                                                        node->num_params = num_params;
-                                                                                    }
-                                                                                }
+	: Type IDENTIFIER 
+        Bracket_open Formal_Param_List ')' 
+                            {   curr_buff = get_new_node(TAC_code);
+                                sprintf(temp_buf, "Func %s begin:\n", $2);
+                                strcat(curr_buff->code, temp_buf);
+                            }
+        Compound_Statement     {          
+                                    symbol_node_t *node = redefined_error_check($2);
+                                    char funcType[100] = "Function: ";
+                                    strcat(funcType, datatype);
+                                    if(!node) {
+                                        symbol_node_t *node = symbol_table_insert(symbol_table,$2, curr_scope->scope_num, funcType, "", yylineno);
+                                        node->num_params = num_params;
+                                    }
+                                    else {
+                                        node->is_function_defined = true;
+                                        node->num_params = num_params;
+                                    }
+
+                                    curr_buff = get_new_node(TAC_code);
+                                    sprintf(temp_buf, "Func end\n");
+                                    strcat(curr_buff->code, temp_buf);
+                                }
 	;
 
 Bracket_open
@@ -429,8 +440,16 @@ Statement
     | Expression ';'
     | Return_Statement    
     | Do_While_Statement      
-    | BREAK ';'
-    | CONTINUE ';'                    
+    | BREAK ';' {  
+                    curr_buff = get_new_node(TAC_code);
+                    sprintf(temp_buf, "GOTO L%d:\n", loopEndLabel);
+                    strcat(curr_buff->code, temp_buf); 
+                }
+    | CONTINUE ';'  {  
+                    curr_buff = get_new_node(TAC_code);
+                    sprintf(temp_buf, "GOTO L%d:\n", loopStartLabel);
+                    strcat(curr_buff->code, temp_buf); 
+                }                  
 	| ';'
     ; 
 
@@ -458,6 +477,7 @@ NotWhileLabel
             curr_buff = get_new_node(TAC_code);
             sprintf(temp_buf, "L%d:\n", LABEL_COUNT);
             strcat(curr_buff->code, temp_buf);
+            loopStartLabel = LABEL_COUNT;
             $$ = LABEL_COUNT++;
         }
     ;
@@ -469,6 +489,7 @@ NotWhileGoto
         
             sprintf(temp_buf, "IF NOT %s GOTO L%d\n", reg.var_name, LABEL_COUNT);
             strcat(curr_buff->code, temp_buf);
+            loopEndLabel = LABEL_COUNT;
 
             $$ = LABEL_COUNT++;        
         }
@@ -489,6 +510,8 @@ NotDoWhileLabel
             curr_buff = get_new_node(TAC_code);
             sprintf(temp_buf, "L%d:\n", LABEL_COUNT);
             strcat(curr_buff->code, temp_buf);
+            loopStartLabel = LABEL_COUNT;
+
             $$ = LABEL_COUNT++;
         }
     ;
@@ -545,6 +568,7 @@ RepeatForLabel
             curr_buff = get_new_node(TAC_code);
             sprintf(temp_buf, "L%d:\n", LABEL_COUNT);
             strcat(curr_buff->code, temp_buf);
+            loopStartLabel = LABEL_COUNT;
             $$ = LABEL_COUNT++;
         }
     ;
@@ -556,6 +580,7 @@ ForExitGoto
             
             sprintf(temp_buf, "IF NOT %s GOTO L%d\n", reg.var_name, LABEL_COUNT);
             strcat(curr_buff->code, temp_buf);
+            loopEndLabel = LABEL_COUNT;
 
             $$ = LABEL_COUNT++;
             TAC_code->top++;

@@ -2,11 +2,17 @@
 
 int main() {
 
-    int a, b, c;
-    int x;
+    int a;
+    int x =1;
     
-    for(a=1+2; a<5+6; a=a+1) {
-        x=3+4;
+    for(a=1; a<5; a=a+1) {
+
+        if(x>1)
+            break;
+        else
+            continue;
     }
-    c=0;
+    a=0;
+
+    return 0;
 }

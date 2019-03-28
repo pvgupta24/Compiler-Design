@@ -9,7 +9,7 @@ if [ -d "$DIRECTORY" ]; then
 fi
 mkdir "$DIRECTORY"
 
-yacc -d parser.y
+yacc -d parser.y -Wnone
 lex scanner.l
 
 gcc lex.yy.c y.tab.c lib/symbol_table.c lib/scope.c lib/stack.c -w -lm -o parser.out
